@@ -1,0 +1,12 @@
+{
+  "run_id": null,
+  "metrics": {
+    "rmse": 1.821246245042584,
+    "mae": 1.442839151210538,
+    "r2": 0.5801277270380799
+  },
+  "model_name": "local-InventoryOptimization-XGBoost",
+  "version": "local",
+  "stage": "None",
+  "local_path": "models/inventory_optimization\\XGBoost.pkl"
+}

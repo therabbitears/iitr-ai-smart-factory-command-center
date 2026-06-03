@@ -1,0 +1,12 @@
+{
+  "run_id": null,
+  "metrics": {
+    "rmse": 1.8188323131745137,
+    "mae": 1.4509441073128606,
+    "r2": 0.5812400108640559
+  },
+  "model_name": "local-InventoryOptimization-Random_Forest",
+  "version": "local",
+  "stage": "None",
+  "local_path": "models/inventory_optimization\\Random_Forest.pkl"
+}

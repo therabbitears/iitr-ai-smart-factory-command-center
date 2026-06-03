@@ -28,9 +28,21 @@ def aggregate_inventory(df: pd.DataFrame, group_cols=('warehouse','sku','date'))
     cols = [c for c in group_cols if c in df.columns]
     if not cols:
         raise ValueError('No grouping columns present for aggregation')
-    agg = df.groupby(cols).agg({
-        'stock': 'sum' if 'stock' in df.columns else 'first',
-        'demand': 'sum' if 'demand' in df.columns else 'first',
-        'on_order': 'sum' if 'on_order' in df.columns else 'first'
-    }).reset_index()
+    agg_dict = {}
+    if 'stock' in df.columns:
+        agg_dict['stock'] = 'sum'
+    if 'demand' in df.columns:
+        agg_dict['demand'] = 'sum'
+    if 'on_order' in df.columns:
+        agg_dict['on_order'] = 'sum'
+    # fallback: include any numeric column not yet included
+    for c in df.select_dtypes(include=['number']).columns:
+        if c not in agg_dict and c not in cols:
+            agg_dict[c] = 'sum'
+
+    if not agg_dict:
+        # nothing numeric to aggregate, just return unique groups
+        agg = df[cols].drop_duplicates().reset_index(drop=True)
+    else:
+        agg = df.groupby(cols).agg(agg_dict).reset_index()
     return agg
