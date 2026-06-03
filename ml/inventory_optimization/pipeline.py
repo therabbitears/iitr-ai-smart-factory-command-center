@@ -7,6 +7,7 @@ from .preprocessing import clean_data, aggregate_inventory
 from .features import InventoryFeatureEngineer
 from .train import train_models, save_model
 from .evaluate import compare_models
+from .mlflow_utils import init_mlflow, log_and_register_models
 
 
 class InventoryOptimizationPipeline:
@@ -46,9 +47,18 @@ class InventoryOptimizationPipeline:
         models = train_models(X_train, y_train)
         results = compare_models(models, X_test, y_test)
 
-        # save best model
+        # MLflow integration: init and log/register models
+        init_mlflow()
+        registry_info = log_and_register_models(models, X_test, y_test, feature_cols, model_dir=self.model_dir)
+
+        # save best model locally
         best_name = results.iloc[0]['model']
         best_model = models[best_name]
         save_model(best_model, os.path.join(self.model_dir, f'best_{best_name.replace(" ","_")}.pkl'))
 
-        return {'models': models, 'results': results, 'feature_columns': feature_cols}
+        return {
+            'models': models,
+            'results': results,
+            'feature_columns': feature_cols,
+            'registry': registry_info
+        }

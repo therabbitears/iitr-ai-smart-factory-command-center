@@ -13,4 +13,9 @@ Module: Inventory Optimization
   - `pipeline.py` - end-to-end orchestration and model persistence
   - `run.py` - CLI entrypoint
 
-Next steps: Add MLflow logging, hyperparameter tuning, and API serving.
+MLflow Integration:
+- Experiment tracking via `mlflow` (optional fallback to local `mlruns_local`).
+- Model registry and versioning using MLflow Model Registry (each model registered under `InventoryOptimization-<model>`).
+- Artifacts are logged to MLflow artifact store when available; otherwise models are saved locally with `.meta.json` summaries.
+
+Next steps: Add hyperparameter tuning (GridSearch/Optuna) and API serving.
