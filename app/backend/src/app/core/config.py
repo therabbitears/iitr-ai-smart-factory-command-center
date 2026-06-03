@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     fastapi_port: int = Field(8000, env="FASTAPI_PORT")
     log_level: str = Field("INFO", env="LOG_LEVEL")
     database_url: AnyUrl = Field(..., env="DATABASE_URL")
+    mlflow_tracking_uri: AnyUrl = Field("file:///tmp/mlruns", env="MLFLOW_TRACKING_URI")
+    mlflow_experiment_name: str = Field("predictive_maintenance", env="MLFLOW_EXPERIMENT_NAME")
+    model_registry_path: str = Field("mlruns", env="MLFLOW_ARTIFACT_ROOT")
 
     class Config:
         env_file = str(Path(__file__).resolve().parents[3] / ".env.example")
