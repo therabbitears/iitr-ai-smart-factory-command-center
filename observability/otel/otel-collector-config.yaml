@@ -1,0 +1,25 @@
+receivers:
+  otlp:
+    protocols:
+      grpc: # for instrumentation libraries
+      http:
+
+exporters:
+  jaeger:
+    endpoint: jaeger:14268/api/traces
+  prometheus:
+    endpoint: 0.0.0.0:8888
+
+processors:
+  batch:
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [jaeger]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [prometheus]

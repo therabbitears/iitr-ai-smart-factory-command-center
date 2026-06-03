@@ -15,6 +15,30 @@ app = FastAPI(title="Smart Factory Command Center API", version="0.1.0", openapi
 setup_logging()
 register_exception_handlers(app)
 
+# Optional instrumentation: Prometheus and OpenTelemetry
+try:
+    # Prometheus instrumentation
+    from prometheus_fastapi_instrumentator import Instrumentator
+    instr = Instrumentator()
+    instr.instrument(app).expose(app)
+except Exception:
+    pass
+
+try:
+    # OpenTelemetry tracing (OTLP -> Collector)
+    from opentelemetry import trace
+    from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor
+    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+    resource = Resource.create({"service.name": "smart-factory-api"})
+    provider = TracerProvider(resource=resource)
+    exporter = OTLPSpanExporter(endpoint="http://localhost:4317", insecure=True)
+    provider.add_span_processor(BatchSpanProcessor(exporter))
+    trace.set_tracer_provider(provider)
+except Exception:
+    pass
+
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
