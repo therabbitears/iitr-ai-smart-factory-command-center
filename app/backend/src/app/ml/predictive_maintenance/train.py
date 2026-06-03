@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+import logging
 
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
@@ -13,20 +14,18 @@ from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.optimizers import Adam
 
-NUMERIC_COLUMNS = [
-    "air_temperature",
-    "process_temperature",
-    "rotational_speed",
-    "torque",
-    "tool_wear",
-    "temp_delta",
-    "wear_rate",
-    "torque_ratio",
-    "temperature_ratio",
-]
+logger = logging.getLogger(__name__)
 
 
 def build_ann_model(input_shape: int) -> Any:
+    """Build a neural network model for binary classification.
+    
+    Args:
+        input_shape: Number of input features
+    
+    Returns:
+        Compiled Keras sequential model
+    """
     model = Sequential(
         [
             Dense(64, activation="relu", input_shape=(input_shape,)),
@@ -41,10 +40,19 @@ def build_ann_model(input_shape: int) -> Any:
         loss="binary_crossentropy",
         metrics=["accuracy"],
     )
+    logger.info(f"Built ANN model with input_shape={input_shape}")
     return model
 
 
 def build_classifiers(random_state: int = 42) -> dict[str, Any]:
+    """Build a dictionary of candidate classifier models.
+    
+    Args:
+        random_state: Random seed for reproducibility
+    
+    Returns:
+        Dict mapping model names to sklearn Pipeline objects
+    """
     return {
         "logistic_regression": Pipeline(
             [
@@ -95,16 +103,29 @@ def build_classifiers(random_state: int = 42) -> dict[str, Any]:
 
 
 def train_ann(
-    X_train: "np.ndarray",
-    y_train: "np.ndarray",
-    X_val: "np.ndarray",
-    y_val: "np.ndarray",
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    X_val: np.ndarray,
+    y_val: np.ndarray,
     epochs: int = 50,
     batch_size: int = 32,
 ) -> Any:
+    """Train a neural network with early stopping.
+    
+    Args:
+        X_train: Training features
+        y_train: Training labels
+        X_val: Validation features
+        y_val: Validation labels
+        epochs: Maximum number of training epochs
+        batch_size: Batch size for training
+    
+    Returns:
+        Trained Keras model
+    """
     model = build_ann_model(X_train.shape[1])
     callback = EarlyStopping(monitor="val_loss", patience=5, restore_best_weights=True)
-    model.fit(
+    history = model.fit(
         X_train,
         y_train,
         validation_data=(X_val, y_val),
@@ -113,4 +134,5 @@ def train_ann(
         callbacks=[callback],
         verbose=0,
     )
+    logger.info(f"ANN training complete: epochs trained={len(history.epoch)}")
     return model
