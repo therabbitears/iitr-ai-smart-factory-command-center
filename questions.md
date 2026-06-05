@@ -1,4297 +1,3108 @@
-# Capstone Predictive Maintenance Questions and Answers
+# Capstone AI/ML Implementation Question Bank
 
-This file contains implementation-specific viva/interview questions for the IIT Roorkee AI Smart Factory Command Center capstone.
+This is a rebuilt, non-padded viva/interview preparation file based on the actual AI/ML-related Python files in the repository. Questions are grouped by module, include file references, and call out real implementation decisions, formulas, risks, and known gaps.
 
-## Formula Sheet
-- StandardScaler: z=(x-mean)/std.
-- Sigmoid: p=1/(1+exp(-(w dot x+b))).
-- Dense layer: output=activation(input dot kernel+bias).
-- ReLU: max(0,x).
-- Binary crossentropy: -mean(y log(p)+(1-y)log(1-p)).
-- Dropout: drop activations with probability rate and scale remaining activations by 1/(1-rate).
-- Precision=TP/(TP+FP), Recall=TP/(TP+FN), F1=2PR/(P+R), Accuracy=(TP+TN)/N.
-- temp_delta=process_temperature-air_temperature.
-- wear_rate=tool_wear/rotational_speed_min.
-- torque_ratio=torque/rotational_speed_min.
-- temperature_ratio=process_temperature/air_temp_min.
+## Files Audited
 
-## Sources Consulted
-- [sklearn LogisticRegression](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html)
-- [sklearn RandomForestClassifier](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html)
-- [sklearn StandardScaler](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html)
-- [sklearn train_test_split](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.train_test_split.html)
-- [sklearn metrics](https://scikit-learn.org/stable/modules/model_evaluation.html)
-- [XGBoost params](https://xgboost.readthedocs.io/en/stable/parameter.html)
-- [Keras Dense](https://keras.io/2/api/layers/core_layers/dense/)
-- [Keras Dropout](https://keras.io/api/layers/regularization_layers/dropout/)
-- [Keras EarlyStopping](https://keras.io/api/callbacks/early_stopping/)
-- [TensorFlow Adam](https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/Adam)
-- [TensorFlow binary_crossentropy](https://www.tensorflow.org/api_docs/python/tf/keras/losses/binary_crossentropy)
-- [Pandera](https://pandera.readthedocs.io/en/stable/)
-- [MLflow](https://mlflow.org/docs/latest/api_reference/python_api/mlflow.html)
-- [Pandas to_datetime](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.to_datetime.html)
+- `app/backend/src/app/ml/predictive_maintenance/train.py`
+- `app/backend/src/app/ml/predictive_maintenance/preprocessing.py`
+- `app/backend/src/app/ml/predictive_maintenance/features.py`
+- `app/backend/src/app/ml/predictive_maintenance/evaluate.py`
+- `app/backend/src/app/ml/predictive_maintenance/pipeline.py`
+- `app/backend/src/app/ml/predictive_maintenance/model_store.py`
+- `app/backend/src/app/ml/quality_inspection/train.py`
+- `app/backend/src/app/ml/quality_inspection/preprocessing.py`
+- `app/backend/src/app/ml/quality_inspection/features.py`
+- `app/backend/src/app/ml/quality_inspection/evaluate.py`
+- `app/backend/src/app/ml/quality_inspection/pipeline.py`
+- `app/backend/src/app/ml/demand_forecasting/train.py`
+- `app/backend/src/app/ml/demand_forecasting/preprocessing.py`
+- `app/backend/src/app/ml/demand_forecasting/features.py`
+- `app/backend/src/app/ml/demand_forecasting/evaluate.py`
+- `app/backend/src/app/ml/demand_forecasting/pipeline.py`
+- `app/backend/src/app/ml/demand_forecasting/model_store.py`
+- `ml/inventory_optimization/train.py`
+- `ml/inventory_optimization/preprocessing.py`
+- `ml/inventory_optimization/features.py`
+- `ml/inventory_optimization/evaluate.py`
+- `ml/inventory_optimization/pipeline.py`
+- `ml/inventory_optimization/mlflow_utils.py`
+- `app/backend/src/app/data/loaders.py`
+- `app/backend/src/app/data/validation.py`
+- `app/backend/src/app/data/profiling.py`
+- `app/backend/src/app/data/versioning.py`
+- `app/backend/services.py`
+- `app/backend/metrics.py`
+
+## Core Formula Sheet
+
+- StandardScaler: `z = (x - mean) / std`.
+- Sigmoid: `p = 1 / (1 + exp(-z))`.
+- Binary crossentropy: `-mean(y log(p) + (1-y) log(1-p))`.
+- Softmax: exponentiate class scores and normalize so class probabilities sum to 1.
+- Sparse categorical crossentropy: multiclass crossentropy for integer class labels.
+- RMSE: `sqrt(mean((y_true - y_pred)^2))`.
+- MAE: `mean(abs(y_true - y_pred))`.
+- MAPE: `mean(abs((y_true - y_pred) / y_true)) * 100`, with epsilon protection in this code.
+- R2: proportion of variance in the target explained by the model.
+- Precision: `TP / (TP + FP)`.
+- Recall: `TP / (TP + FN)`.
+- F1: `2 * precision * recall / (precision + recall)`.
 
 ## Questions
 
+## Project and Architecture
 
-## Data Validation
+### Q1. What is the central AI/ML idea of the capstone?
 
-### Q1. Why is `machine_id` important from the schema type perspective?
+The project is an AI operations platform for a smart factory. It combines predictive maintenance, quality inspection, demand forecasting, and inventory optimization instead of stopping at one isolated model.
 
-`machine_id` is treated as str because it represents asset identity. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
+**File reference:** `architecture.md:1`
 
-**File reference:** `app/backend/src/app/data/loaders.py:128`
+### Q2. Why is this stronger than a single Kaggle notebook?
 
-### Q2. Why is `machine_id` important from the missing value risk perspective?
+A notebook usually ends at model metrics. This repo includes validation, profiling, versioning, feature engineering, model comparison, persistence, API contracts, and observability.
 
-`machine_id` is treated as str because it represents asset identity. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
+**File reference:** `architecture.md:84`
 
-**File reference:** `app/backend/src/app/data/loaders.py:128`
+### Q3. Which module is safest to present as the primary capstone?
 
-### Q3. Why is `machine_id` important from the business meaning perspective?
+Predictive maintenance is the most complete because it has load, validate, clean, profile, balance analysis, leakage-aware feature engineering, model comparison, MLflow logging, and persistence.
 
-`machine_id` is treated as str because it represents asset identity. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:25`
 
-**File reference:** `app/backend/src/app/data/loaders.py:128`
+### Q4. Which modules should be presented as extensions?
 
-### Q4. Why is `machine_id` important from the model impact perspective?
+Quality inspection, demand forecasting, and inventory optimization show breadth, but should be presented as extensions because some have implementation gaps.
 
-`machine_id` is treated as str because it represents asset identity. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
+**File reference:** `app/backend/src/app/ml/quality_inspection/pipeline.py:25; app/backend/src/app/ml/demand_forecasting/pipeline.py:28; ml/inventory_optimization/pipeline.py:12`
 
-**File reference:** `app/backend/src/app/data/loaders.py:128`
+### Q5. What is the MLOps story in the repo?
 
-### Q5. Why is `machine_id` important from the validation defense perspective?
+Training pipelines produce metrics and artifacts. Predictive maintenance and demand forecasting use MLflow-style logging, while inventory has MLflow registration with local fallback.
 
-`machine_id` is treated as str because it represents asset identity. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:14; ml/inventory_optimization/mlflow_utils.py:1`
 
-**File reference:** `app/backend/src/app/data/loaders.py:128`
+### Q6. What is the data-engineering story?
 
-### Q6. Why is `timestamp` important from the schema type perspective?
+Raw datasets are loaded, normalized, schema-validated, profiled, versioned, cleaned, and transformed before model training.
 
-`timestamp` is treated as datetime because it represents sensor event time. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
+**File reference:** `app/backend/src/app/data/loaders.py:14`
 
-**File reference:** `app/backend/src/app/data/loaders.py:129`
+### Q7. What is the biggest deployment gap?
 
-### Q7. Why is `timestamp` important from the missing value risk perspective?
+The API service currently returns deterministic heuristics rather than loading the persisted trained model artifacts.
 
-`timestamp` is treated as datetime because it represents sensor event time. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
+**File reference:** `app/backend/services.py:14`
 
-**File reference:** `app/backend/src/app/data/loaders.py:129`
+### Q8. What is the best anti-leakage design decision?
 
-### Q8. Why is `timestamp` important from the business meaning perspective?
+Predictive maintenance and quality inspection split data before fitting feature engineering statistics, so test-set information is not used during training transformation.
 
-`timestamp` is treated as datetime because it represents sensor event time. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:45; app/backend/src/app/ml/quality_inspection/pipeline.py:66`
 
-**File reference:** `app/backend/src/app/data/loaders.py:129`
+### Q9. What common ML workflow pattern appears across modules?
 
-### Q9. Why is `timestamp` important from the model impact perspective?
+The pattern is clean data, validate columns, split data, engineer features, train candidate models, compare metrics, choose a winner, and persist/log artifacts.
 
-`timestamp` is treated as datetime because it represents sensor event time. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:25`
 
-**File reference:** `app/backend/src/app/data/loaders.py:129`
+### Q10. How should you honestly explain prototype parts?
 
-### Q10. Why is `timestamp` important from the validation defense perspective?
+Say that training pipelines are implemented, while some serving and extension-module pieces are prototypes that need artifact loading and missing-file fixes.
 
-`timestamp` is treated as datetime because it represents sensor event time. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
+**File reference:** `app/backend/services.py:14; app/backend/src/app/ml/quality_inspection/pipeline.py:21`
 
-**File reference:** `app/backend/src/app/data/loaders.py:129`
+## Data Loading, Validation, Profiling, and Versioning
 
-### Q11. Why is `air_temperature` important from the schema type perspective?
+### Q11. Why support CSV and Parquet?
 
-`air_temperature` is treated as float 0..100 because it represents ambient heat. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
+CSV is common for Kaggle data, while Parquet is efficient for larger columnar data. Supporting both makes ingestion flexible.
 
-**File reference:** `app/backend/src/app/data/loaders.py:130`; `app/backend/src/app/ml/predictive_maintenance/features.py:10`
+**File reference:** `app/backend/src/app/data/loaders.py:39`
 
-### Q12. Why is `air_temperature` important from the missing value risk perspective?
+### Q12. Why parse configured date columns during loading?
 
-`air_temperature` is treated as float 0..100 because it represents ambient heat. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:130`; `app/backend/src/app/ml/predictive_maintenance/features.py:10`
-
-### Q13. Why is `air_temperature` important from the business meaning perspective?
-
-`air_temperature` is treated as float 0..100 because it represents ambient heat. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:130`; `app/backend/src/app/ml/predictive_maintenance/features.py:10`
-
-### Q14. Why is `air_temperature` important from the model impact perspective?
-
-`air_temperature` is treated as float 0..100 because it represents ambient heat. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:130`; `app/backend/src/app/ml/predictive_maintenance/features.py:10`
-
-### Q15. Why is `air_temperature` important from the validation defense perspective?
-
-`air_temperature` is treated as float 0..100 because it represents ambient heat. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:130`; `app/backend/src/app/ml/predictive_maintenance/features.py:10`
-
-### Q16. Why is `process_temperature` important from the schema type perspective?
-
-`process_temperature` is treated as float 0..200 because it represents process heat. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:131`; `app/backend/src/app/ml/predictive_maintenance/features.py:11`
-
-### Q17. Why is `process_temperature` important from the missing value risk perspective?
-
-`process_temperature` is treated as float 0..200 because it represents process heat. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:131`; `app/backend/src/app/ml/predictive_maintenance/features.py:11`
-
-### Q18. Why is `process_temperature` important from the business meaning perspective?
-
-`process_temperature` is treated as float 0..200 because it represents process heat. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:131`; `app/backend/src/app/ml/predictive_maintenance/features.py:11`
-
-### Q19. Why is `process_temperature` important from the model impact perspective?
-
-`process_temperature` is treated as float 0..200 because it represents process heat. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:131`; `app/backend/src/app/ml/predictive_maintenance/features.py:11`
-
-### Q20. Why is `process_temperature` important from the validation defense perspective?
-
-`process_temperature` is treated as float 0..200 because it represents process heat. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:131`; `app/backend/src/app/ml/predictive_maintenance/features.py:11`
-
-### Q21. Why is `rotational_speed` important from the schema type perspective?
-
-`rotational_speed` is treated as float >=0 because it represents shaft speed. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:132`; `app/backend/src/app/ml/predictive_maintenance/features.py:12`
-
-### Q22. Why is `rotational_speed` important from the missing value risk perspective?
-
-`rotational_speed` is treated as float >=0 because it represents shaft speed. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:132`; `app/backend/src/app/ml/predictive_maintenance/features.py:12`
-
-### Q23. Why is `rotational_speed` important from the business meaning perspective?
-
-`rotational_speed` is treated as float >=0 because it represents shaft speed. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:132`; `app/backend/src/app/ml/predictive_maintenance/features.py:12`
-
-### Q24. Why is `rotational_speed` important from the model impact perspective?
-
-`rotational_speed` is treated as float >=0 because it represents shaft speed. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:132`; `app/backend/src/app/ml/predictive_maintenance/features.py:12`
-
-### Q25. Why is `rotational_speed` important from the validation defense perspective?
-
-`rotational_speed` is treated as float >=0 because it represents shaft speed. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:132`; `app/backend/src/app/ml/predictive_maintenance/features.py:12`
-
-### Q26. Why is `torque` important from the schema type perspective?
-
-`torque` is treated as float >=0 because it represents rotational force. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:133`; `app/backend/src/app/ml/predictive_maintenance/features.py:13`
-
-### Q27. Why is `torque` important from the missing value risk perspective?
-
-`torque` is treated as float >=0 because it represents rotational force. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:133`; `app/backend/src/app/ml/predictive_maintenance/features.py:13`
-
-### Q28. Why is `torque` important from the business meaning perspective?
-
-`torque` is treated as float >=0 because it represents rotational force. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:133`; `app/backend/src/app/ml/predictive_maintenance/features.py:13`
-
-### Q29. Why is `torque` important from the model impact perspective?
-
-`torque` is treated as float >=0 because it represents rotational force. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:133`; `app/backend/src/app/ml/predictive_maintenance/features.py:13`
-
-### Q30. Why is `torque` important from the validation defense perspective?
-
-`torque` is treated as float >=0 because it represents rotational force. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:133`; `app/backend/src/app/ml/predictive_maintenance/features.py:13`
-
-### Q31. Why is `tool_wear` important from the schema type perspective?
-
-`tool_wear` is treated as float 0..100 because it represents wear level. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:134`; `app/backend/src/app/ml/predictive_maintenance/features.py:14`
-
-### Q32. Why is `tool_wear` important from the missing value risk perspective?
-
-`tool_wear` is treated as float 0..100 because it represents wear level. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:134`; `app/backend/src/app/ml/predictive_maintenance/features.py:14`
-
-### Q33. Why is `tool_wear` important from the business meaning perspective?
-
-`tool_wear` is treated as float 0..100 because it represents wear level. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:134`; `app/backend/src/app/ml/predictive_maintenance/features.py:14`
-
-### Q34. Why is `tool_wear` important from the model impact perspective?
-
-`tool_wear` is treated as float 0..100 because it represents wear level. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:134`; `app/backend/src/app/ml/predictive_maintenance/features.py:14`
-
-### Q35. Why is `tool_wear` important from the validation defense perspective?
-
-`tool_wear` is treated as float 0..100 because it represents wear level. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:134`; `app/backend/src/app/ml/predictive_maintenance/features.py:14`
-
-### Q36. Why is `machine_failure` important from the schema type perspective?
-
-`machine_failure` is treated as int in {0,1} because it represents binary target. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:135`; `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:18`
-
-### Q37. Why is `machine_failure` important from the missing value risk perspective?
-
-`machine_failure` is treated as int in {0,1} because it represents binary target. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:135`; `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:18`
-
-### Q38. Why is `machine_failure` important from the business meaning perspective?
-
-`machine_failure` is treated as int in {0,1} because it represents binary target. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:135`; `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:18`
-
-### Q39. Why is `machine_failure` important from the model impact perspective?
-
-`machine_failure` is treated as int in {0,1} because it represents binary target. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:135`; `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:18`
-
-### Q40. Why is `machine_failure` important from the validation defense perspective?
-
-`machine_failure` is treated as int in {0,1} because it represents binary target. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:135`; `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:18`
-
-### Q41. Why is `failure_type` important from the schema type perspective?
-
-`failure_type` is treated as str because it represents failure category. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:136`
-
-### Q42. Why is `failure_type` important from the missing value risk perspective?
-
-`failure_type` is treated as str because it represents failure category. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:136`
-
-### Q43. Why is `failure_type` important from the business meaning perspective?
-
-`failure_type` is treated as str because it represents failure category. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:136`
-
-### Q44. Why is `failure_type` important from the model impact perspective?
-
-`failure_type` is treated as str because it represents failure category. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:136`
-
-### Q45. Why is `failure_type` important from the validation defense perspective?
-
-`failure_type` is treated as str because it represents failure category. In this implementation the Pandera schema checks this before training, so invalid factory records are rejected early instead of silently corrupting the feature matrix, target labels, or audit trail.
-
-**File reference:** `app/backend/src/app/data/loaders.py:136`
-
-## Validation Engine
-
-### Q46. why used: `DataFrameSchema`?
-
-`DataFrameSchema` is used for table contract. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:126`
-
-### Q47. what risk reduced: `DataFrameSchema`?
-
-`DataFrameSchema` is used for table contract. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:126`
-
-### Q48. how to defend: `DataFrameSchema`?
-
-`DataFrameSchema` is used for table contract. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:126`
-
-### Q49. what happens if removed: `DataFrameSchema`?
-
-`DataFrameSchema` is used for table contract. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:126`
-
-### Q50. why used: `Column`?
-
-`Column` is used for column contract. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:128`
-
-### Q51. what risk reduced: `Column`?
-
-`Column` is used for column contract. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:128`
-
-### Q52. how to defend: `Column`?
-
-`Column` is used for column contract. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:128`
-
-### Q53. what happens if removed: `Column`?
-
-`Column` is used for column contract. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:128`
-
-### Q54. why used: `nullable=False`?
-
-`nullable=False` is used for no missing core values. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:128`
-
-### Q55. what risk reduced: `nullable=False`?
-
-`nullable=False` is used for no missing core values. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:128`
-
-### Q56. how to defend: `nullable=False`?
-
-`nullable=False` is used for no missing core values. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:128`
-
-### Q57. what happens if removed: `nullable=False`?
-
-`nullable=False` is used for no missing core values. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:128`
-
-### Q58. why used: `Check.in_range`?
-
-`Check.in_range` is used for physical bounds. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:130`
-
-### Q59. what risk reduced: `Check.in_range`?
-
-`Check.in_range` is used for physical bounds. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:130`
-
-### Q60. how to defend: `Check.in_range`?
-
-`Check.in_range` is used for physical bounds. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:130`
-
-### Q61. what happens if removed: `Check.in_range`?
-
-`Check.in_range` is used for physical bounds. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:130`
-
-### Q62. why used: `Check.ge(0)`?
-
-`Check.ge(0)` is used for non-negative physical quantities. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:132`
-
-### Q63. what risk reduced: `Check.ge(0)`?
-
-`Check.ge(0)` is used for non-negative physical quantities. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:132`
-
-### Q64. how to defend: `Check.ge(0)`?
-
-`Check.ge(0)` is used for non-negative physical quantities. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:132`
-
-### Q65. what happens if removed: `Check.ge(0)`?
-
-`Check.ge(0)` is used for non-negative physical quantities. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:132`
-
-### Q66. why used: `Check.isin([0,1])`?
-
-`Check.isin([0,1])` is used for binary labels. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:135`
-
-### Q67. what risk reduced: `Check.isin([0,1])`?
-
-`Check.isin([0,1])` is used for binary labels. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:135`
-
-### Q68. how to defend: `Check.isin([0,1])`?
-
-`Check.isin([0,1])` is used for binary labels. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:135`
-
-### Q69. what happens if removed: `Check.isin([0,1])`?
-
-`Check.isin([0,1])` is used for binary labels. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:135`
-
-### Q70. why used: `strict=True`?
-
-`strict=True` is used for no unexpected columns or leakage. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:138`
-
-### Q71. what risk reduced: `strict=True`?
-
-`strict=True` is used for no unexpected columns or leakage. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:138`
-
-### Q72. how to defend: `strict=True`?
-
-`strict=True` is used for no unexpected columns or leakage. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:138`
-
-### Q73. what happens if removed: `strict=True`?
-
-`strict=True` is used for no unexpected columns or leakage. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/loaders.py:138`
-
-### Q74. why used: `lazy=True`?
-
-`lazy=True` is used for collect many errors. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/validation.py:16`
-
-### Q75. what risk reduced: `lazy=True`?
-
-`lazy=True` is used for collect many errors. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/validation.py:16`
-
-### Q76. how to defend: `lazy=True`?
-
-`lazy=True` is used for collect many errors. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/validation.py:16`
-
-### Q77. what happens if removed: `lazy=True`?
-
-`lazy=True` is used for collect many errors. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/validation.py:16`
-
-### Q78. why used: `SchemaError`?
-
-`SchemaError` is used for structured exception. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/validation.py:5`
-
-### Q79. what risk reduced: `SchemaError`?
-
-`SchemaError` is used for structured exception. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/validation.py:5`
-
-### Q80. how to defend: `SchemaError`?
-
-`SchemaError` is used for structured exception. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/validation.py:5`
-
-### Q81. what happens if removed: `SchemaError`?
-
-`SchemaError` is used for structured exception. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/validation.py:5`
-
-### Q82. why used: `failure_cases`?
-
-`failure_cases` is used for debuggable bad rows. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/validation.py:19`
-
-### Q83. what risk reduced: `failure_cases`?
-
-`failure_cases` is used for debuggable bad rows. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/validation.py:19`
-
-### Q84. how to defend: `failure_cases`?
-
-`failure_cases` is used for debuggable bad rows. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/validation.py:19`
-
-### Q85. what happens if removed: `failure_cases`?
-
-`failure_cases` is used for debuggable bad rows. It makes data quality explicit, reproducible, and explainable. If removed, the pipeline may train on malformed data or fail later with weaker diagnostic information.
-
-**File reference:** `app/backend/src/app/data/validation.py:19`
-
-## Loading and Cleaning
-
-### Q86. What is the purpose of `Path(source_path)`?
-
-`Path(source_path)` normalizes dataset path. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/data/loaders.py:17`
-
-### Q87. What is the failure mode of `Path(source_path)`?
-
-`Path(source_path)` normalizes dataset path. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/data/loaders.py:17`
-
-### Q88. What is the capstone reasoning of `Path(source_path)`?
-
-`Path(source_path)` normalizes dataset path. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/data/loaders.py:17`
-
-### Q89. What is the production reasoning of `Path(source_path)`?
-
-`Path(source_path)` normalizes dataset path. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/data/loaders.py:17`
-
-### Q90. What is the purpose of `exists check`?
-
-`exists check` fails fast for missing data. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/data/loaders.py:38`
-
-### Q91. What is the failure mode of `exists check`?
-
-`exists check` fails fast for missing data. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/data/loaders.py:38`
-
-### Q92. What is the capstone reasoning of `exists check`?
-
-`exists check` fails fast for missing data. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/data/loaders.py:38`
-
-### Q93. What is the production reasoning of `exists check`?
-
-`exists check` fails fast for missing data. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/data/loaders.py:38`
-
-### Q94. What is the purpose of `.csv branch`?
-
-`.csv branch` loads Kaggle CSV. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
+Date parsing is needed for time features, temporal splits, and `.dt` operations in forecasting modules.
 
 **File reference:** `app/backend/src/app/data/loaders.py:41`
 
-### Q95. What is the failure mode of `.csv branch`?
+### Q13. Why strip whitespace from column names?
 
-`.csv branch` loads Kaggle CSV. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/data/loaders.py:41`
-
-### Q96. What is the capstone reasoning of `.csv branch`?
-
-`.csv branch` loads Kaggle CSV. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/data/loaders.py:41`
-
-### Q97. What is the production reasoning of `.csv branch`?
-
-`.csv branch` loads Kaggle CSV. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/data/loaders.py:41`
-
-### Q98. What is the purpose of `.parquet branch`?
-
-`.parquet branch` supports efficient columnar files. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/data/loaders.py:43`
-
-### Q99. What is the failure mode of `.parquet branch`?
-
-`.parquet branch` supports efficient columnar files. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/data/loaders.py:43`
-
-### Q100. What is the capstone reasoning of `.parquet branch`?
-
-`.parquet branch` supports efficient columnar files. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/data/loaders.py:43`
-
-### Q101. What is the production reasoning of `.parquet branch`?
-
-`.parquet branch` supports efficient columnar files. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/data/loaders.py:43`
-
-### Q102. What is the purpose of `parse_dates`?
-
-`parse_dates` handles timestamp columns. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/data/loaders.py:41`
-
-### Q103. What is the failure mode of `parse_dates`?
-
-`parse_dates` handles timestamp columns. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/data/loaders.py:41`
-
-### Q104. What is the capstone reasoning of `parse_dates`?
-
-`parse_dates` handles timestamp columns. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/data/loaders.py:41`
-
-### Q105. What is the production reasoning of `parse_dates`?
-
-`parse_dates` handles timestamp columns. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/data/loaders.py:41`
-
-### Q106. What is the purpose of `_normalize_columns`?
-
-`_normalize_columns` strips header whitespace. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
+Whitespace in CSV headers can cause false schema failures. Stripping headers prevents this common ingestion bug.
 
 **File reference:** `app/backend/src/app/data/loaders.py:49`
 
-### Q107. What is the failure mode of `_normalize_columns`?
+### Q14. Why reject unsupported file extensions?
 
-`_normalize_columns` strips header whitespace. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
+Rejecting unknown formats prevents silent misreads and gives a clear error when the data source is wrong.
 
-**File reference:** `app/backend/src/app/data/loaders.py:49`
+**File reference:** `app/backend/src/app/data/loaders.py:45`
 
-### Q108. What is the capstone reasoning of `_normalize_columns`?
+### Q15. Why make schema an abstract property?
 
-`_normalize_columns` strips header whitespace. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
+Every dataset has its own required columns and checks, so each loader must define a schema contract.
 
-**File reference:** `app/backend/src/app/data/loaders.py:49`
+**File reference:** `app/backend/src/app/data/loaders.py:21`
 
-### Q109. What is the production reasoning of `_normalize_columns`?
+### Q16. Why use Pandera strict=True?
 
-`_normalize_columns` strips header whitespace. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
+It rejects unexpected columns that could cause schema drift or target leakage.
 
-**File reference:** `app/backend/src/app/data/loaders.py:49`
+**File reference:** `app/backend/src/app/data/loaders.py:138`
 
-### Q110. What is the purpose of `df.copy()`?
+### Q17. Why validate machine_failure as 0 or 1?
 
-`df.copy()` avoids mutating caller data. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
+The predictive-maintenance model is binary; sigmoid output and binary loss assume two classes.
+
+**File reference:** `app/backend/src/app/data/loaders.py:135`
+
+### Q18. Why range-check temperatures?
+
+Range checks catch impossible or suspicious physical readings before model training.
+
+**File reference:** `app/backend/src/app/data/loaders.py:130`
+
+### Q19. Why check torque and rotational speed as non-negative?
+
+Negative values would not match the physical interpretation of these machine signals.
+
+**File reference:** `app/backend/src/app/data/loaders.py:132`
+
+### Q20. Why does SteelPlatesDatasetLoader use integer class labels?
+
+Quality inspection is multiclass classification, and integer labels work with sparse categorical crossentropy.
+
+**File reference:** `app/backend/src/app/data/loaders.py:168`
+
+### Q21. What mismatch exists in the demand schema?
+
+The shared schema expects `sales`, while the demand pipeline expects `demand`. This should be standardized.
+
+**File reference:** `app/backend/src/app/data/loaders.py:198; app/backend/src/app/ml/demand_forecasting/preprocessing.py:38`
+
+### Q22. Why validate supplier_score between 0 and 1?
+
+It is treated as a normalized supplier-performance signal, so bounded values are safer.
+
+**File reference:** `app/backend/src/app/data/loaders.py:240`
+
+### Q23. Why call Pandera validate with lazy=True?
+
+Lazy validation collects multiple validation errors instead of stopping at the first error.
+
+**File reference:** `app/backend/src/app/data/validation.py:16`
+
+### Q24. Why return ValidationResult instead of only raising?
+
+A structured success/errors object is easier to log, return, and inspect in pipelines.
+
+**File reference:** `app/backend/src/app/data/validation.py:17`
+
+### Q25. What is a limitation of catching only SchemaError?
+
+Some Pandera or runtime errors may not be SchemaError and will propagate directly.
+
+**File reference:** `app/backend/src/app/data/validation.py:18`
+
+### Q26. Why profile row_count and column_count?
+
+They reveal whether loading or cleaning unexpectedly changed dataset size.
+
+**File reference:** `app/backend/src/app/data/profiling.py:11`
+
+### Q27. Why compute missing_percent?
+
+Percentages make missingness comparable across datasets of different sizes.
+
+**File reference:** `app/backend/src/app/data/profiling.py:15`
+
+### Q28. Why compute numeric summary statistics?
+
+Min, max, mean, median, and std quickly reveal outliers, scale, and suspicious constants.
+
+**File reference:** `app/backend/src/app/data/profiling.py:24`
+
+### Q29. Why use std(ddof=0) in profiling?
+
+For dataset profiling, population-style standard deviation is consistent for the observed dataset snapshot.
+
+**File reference:** `app/backend/src/app/data/profiling.py:38`
+
+### Q30. Why store top five values per column?
+
+Top values reveal dominant categories, default values, and possible class imbalance.
+
+**File reference:** `app/backend/src/app/data/profiling.py:44`
+
+### Q31. Why hash the raw file?
+
+The checksum proves whether the underlying dataset content changed between experiments.
+
+**File reference:** `app/backend/src/app/data/versioning.py:13`
+
+### Q32. Why hash the schema separately?
+
+Schema hash detects column/type changes even when file size or row count looks similar.
+
+**File reference:** `app/backend/src/app/data/versioning.py:22`
+
+### Q33. Why combine raw checksum, schema checksum, row count, and column count?
+
+Together they form a reproducible dataset version identity for model lineage.
+
+**File reference:** `app/backend/src/app/data/versioning.py:29`
+
+### Q34. Why hash files in 8192-byte chunks?
+
+Chunking avoids loading large datasets fully into memory while computing checksums.
+
+**File reference:** `app/backend/src/app/data/versioning.py:16`
+
+### Q35. Why store created_at in dataset version info?
+
+It records when the dataset version was generated for audit and experiment traceability.
+
+**File reference:** `app/backend/src/app/data/versioning.py:42`
+
+### Q36. Why does ingest raise on validation failure?
+
+Training on invalid data would make metrics meaningless, so the pipeline fails early.
+
+**File reference:** `app/backend/src/app/data/loaders.py:86`
+
+### Q37. Why provide analyze_missing?
+
+It gives a reusable missing-value report before deciding whether to drop or impute.
+
+**File reference:** `app/backend/src/app/data/loaders.py:54`
+
+### Q38. Why report memory_usage_mb?
+
+It helps decide whether Pandas is sufficient or larger-scale processing is needed.
+
+**File reference:** `app/backend/src/app/data/loaders.py:69`
+
+### Q39. Why is date_columns class-level?
+
+Each dataset declares its own temporal fields while BaseDatasetLoader handles parsing generically.
+
+**File reference:** `app/backend/src/app/data/loaders.py:15`
+
+### Q40. What quality-label validation should be added?
+
+The `class` column should be checked to ensure labels are in the expected seven-class range.
+
+**File reference:** `app/backend/src/app/data/loaders.py:168; app/backend/src/app/ml/quality_inspection/train.py:37`
+
+## Predictive Maintenance
+
+### Q41. What exact ML task does predictive maintenance solve?
+
+It solves binary classification: predict whether `machine_failure` is 0 or 1 from machine sensor features.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:18`
+
+### Q42. Why use only five raw numeric sensor columns?
+
+They are direct, numeric, physically meaningful machine signals suitable for sklearn and Keras models.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:8`
+
+### Q43. Why does clean_data copy the DataFrame?
+
+It prevents accidental mutation of raw loaded data, which helps debugging and profiling.
 
 **File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:22`
 
-### Q111. What is the failure mode of `df.copy()`?
+### Q44. Why drop duplicate machine records?
 
-`df.copy()` avoids mutating caller data. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:22`
-
-### Q112. What is the capstone reasoning of `df.copy()`?
-
-`df.copy()` avoids mutating caller data. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:22`
-
-### Q113. What is the production reasoning of `df.copy()`?
-
-`df.copy()` avoids mutating caller data. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:22`
-
-### Q114. What is the purpose of `drop_duplicates()`?
-
-`drop_duplicates()` removes repeated records. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
+Duplicate rows can overweight repeated observations and bias model training.
 
 **File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:25`
 
-### Q115. What is the failure mode of `drop_duplicates()`?
+### Q45. Why convert timestamp to UTC?
 
-`drop_duplicates()` removes repeated records. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:25`
-
-### Q116. What is the capstone reasoning of `drop_duplicates()`?
-
-`drop_duplicates()` removes repeated records. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:25`
-
-### Q117. What is the production reasoning of `drop_duplicates()`?
-
-`drop_duplicates()` removes repeated records. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:25`
-
-### Q118. What is the purpose of `pd.to_datetime(...,utc=True)`?
-
-`pd.to_datetime(...,utc=True)` standardizes timestamps. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
+UTC avoids timezone ambiguity and prepares the data for future temporal features.
 
 **File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:28`
 
-### Q119. What is the failure mode of `pd.to_datetime(...,utc=True)`?
+### Q46. Why drop rows with missing feature or target values?
 
-`pd.to_datetime(...,utc=True)` standardizes timestamps. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:28`
-
-### Q120. What is the capstone reasoning of `pd.to_datetime(...,utc=True)`?
-
-`pd.to_datetime(...,utc=True)` standardizes timestamps. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:28`
-
-### Q121. What is the production reasoning of `pd.to_datetime(...,utc=True)`?
-
-`pd.to_datetime(...,utc=True)` standardizes timestamps. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:28`
-
-### Q122. What is the purpose of `dropna(subset=features+target)`?
-
-`dropna(subset=features+target)` keeps complete training rows. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
+Supervised training needs complete core features and labels. Missing required values make the sample unsafe.
 
 **File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:30`
 
-### Q123. What is the failure mode of `dropna(subset=features+target)`?
+### Q47. Why validate numeric dtypes?
 
-`dropna(subset=features+target)` keeps complete training rows. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:30`
-
-### Q124. What is the capstone reasoning of `dropna(subset=features+target)`?
-
-`dropna(subset=features+target)` keeps complete training rows. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:30`
-
-### Q125. What is the production reasoning of `dropna(subset=features+target)`?
-
-`dropna(subset=features+target)` keeps complete training rows. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:30`
-
-### Q126. What is the purpose of `astype(int)`?
-
-`astype(int)` makes labels class integers. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:72`
-
-### Q127. What is the failure mode of `astype(int)`?
-
-`astype(int)` makes labels class integers. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:72`
-
-### Q128. What is the capstone reasoning of `astype(int)`?
-
-`astype(int)` makes labels class integers. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:72`
-
-### Q129. What is the production reasoning of `astype(int)`?
-
-`astype(int)` makes labels class integers. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:72`
-
-### Q130. What is the purpose of `validate_numeric_columns`?
-
-`validate_numeric_columns` ensures model-ready numeric input. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
+Scikit-learn and Keras expect numeric arrays; object/string columns can break or distort training.
 
 **File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:34`
 
-### Q131. What is the failure mode of `validate_numeric_columns`?
+### Q48. What is wrong with the current imbalance_ratio warning?
 
-`validate_numeric_columns` ensures model-ready numeric input. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
+The code computes class_1/class_0 and warns when >10, but rare failures usually produce a ratio below 1. A majority/minority ratio would be better.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:34`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:50; app/backend/src/app/ml/predictive_maintenance/pipeline.py:51`
 
-### Q132. What is the capstone reasoning of `validate_numeric_columns`?
+### Q49. Why use stratify=y in split_data?
 
-`validate_numeric_columns` ensures model-ready numeric input. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:34`
-
-### Q133. What is the production reasoning of `validate_numeric_columns`?
-
-`validate_numeric_columns` ensures model-ready numeric input. This matters because ML quality depends heavily on reliable preprocessing; clean data prevents biased training, hidden runtime errors, and misleading metrics.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:34`
-
-## Feature Engineering
-
-### Q134. formula: `temp_delta`?
-
-`temp_delta` uses `process_temperature-air_temperature` and captures thermal stress. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:18`; `app/backend/src/app/ml/predictive_maintenance/features.py:49`
-
-### Q135. why useful: `temp_delta`?
-
-`temp_delta` uses `process_temperature-air_temperature` and captures thermal stress. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:18`; `app/backend/src/app/ml/predictive_maintenance/features.py:49`
-
-### Q136. leakage prevention: `temp_delta`?
-
-`temp_delta` uses `process_temperature-air_temperature` and captures thermal stress. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:18`; `app/backend/src/app/ml/predictive_maintenance/features.py:49`
-
-### Q137. what if removed: `temp_delta`?
-
-`temp_delta` uses `process_temperature-air_temperature` and captures thermal stress. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:18`; `app/backend/src/app/ml/predictive_maintenance/features.py:49`
-
-### Q138. defense answer: `temp_delta`?
-
-`temp_delta` uses `process_temperature-air_temperature` and captures thermal stress. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:18`; `app/backend/src/app/ml/predictive_maintenance/features.py:49`
-
-### Q139. formula: `wear_rate`?
-
-`wear_rate` uses `tool_wear/rotational_speed_min` and captures wear normalized by speed baseline. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:19`; `app/backend/src/app/ml/predictive_maintenance/features.py:50`
-
-### Q140. why useful: `wear_rate`?
-
-`wear_rate` uses `tool_wear/rotational_speed_min` and captures wear normalized by speed baseline. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:19`; `app/backend/src/app/ml/predictive_maintenance/features.py:50`
-
-### Q141. leakage prevention: `wear_rate`?
-
-`wear_rate` uses `tool_wear/rotational_speed_min` and captures wear normalized by speed baseline. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:19`; `app/backend/src/app/ml/predictive_maintenance/features.py:50`
-
-### Q142. what if removed: `wear_rate`?
-
-`wear_rate` uses `tool_wear/rotational_speed_min` and captures wear normalized by speed baseline. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:19`; `app/backend/src/app/ml/predictive_maintenance/features.py:50`
-
-### Q143. defense answer: `wear_rate`?
-
-`wear_rate` uses `tool_wear/rotational_speed_min` and captures wear normalized by speed baseline. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:19`; `app/backend/src/app/ml/predictive_maintenance/features.py:50`
-
-### Q144. formula: `torque_ratio`?
-
-`torque_ratio` uses `torque/rotational_speed_min` and captures load relative to speed baseline. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:20`; `app/backend/src/app/ml/predictive_maintenance/features.py:51`
-
-### Q145. why useful: `torque_ratio`?
-
-`torque_ratio` uses `torque/rotational_speed_min` and captures load relative to speed baseline. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:20`; `app/backend/src/app/ml/predictive_maintenance/features.py:51`
-
-### Q146. leakage prevention: `torque_ratio`?
-
-`torque_ratio` uses `torque/rotational_speed_min` and captures load relative to speed baseline. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:20`; `app/backend/src/app/ml/predictive_maintenance/features.py:51`
-
-### Q147. what if removed: `torque_ratio`?
-
-`torque_ratio` uses `torque/rotational_speed_min` and captures load relative to speed baseline. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:20`; `app/backend/src/app/ml/predictive_maintenance/features.py:51`
-
-### Q148. defense answer: `torque_ratio`?
-
-`torque_ratio` uses `torque/rotational_speed_min` and captures load relative to speed baseline. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:20`; `app/backend/src/app/ml/predictive_maintenance/features.py:51`
-
-### Q149. formula: `temperature_ratio`?
-
-`temperature_ratio` uses `process_temperature/air_temp_min` and captures process heat relative to ambient baseline. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:21`; `app/backend/src/app/ml/predictive_maintenance/features.py:52`
-
-### Q150. why useful: `temperature_ratio`?
-
-`temperature_ratio` uses `process_temperature/air_temp_min` and captures process heat relative to ambient baseline. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:21`; `app/backend/src/app/ml/predictive_maintenance/features.py:52`
-
-### Q151. leakage prevention: `temperature_ratio`?
-
-`temperature_ratio` uses `process_temperature/air_temp_min` and captures process heat relative to ambient baseline. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:21`; `app/backend/src/app/ml/predictive_maintenance/features.py:52`
-
-### Q152. what if removed: `temperature_ratio`?
-
-`temperature_ratio` uses `process_temperature/air_temp_min` and captures process heat relative to ambient baseline. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:21`; `app/backend/src/app/ml/predictive_maintenance/features.py:52`
-
-### Q153. defense answer: `temperature_ratio`?
-
-`temperature_ratio` uses `process_temperature/air_temp_min` and captures process heat relative to ambient baseline. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:21`; `app/backend/src/app/ml/predictive_maintenance/features.py:52`
-
-### Q154. formula: `rotational_speed_min`?
-
-`rotational_speed_min` uses `max(train min,1.0)` and captures safe denominator learned only from train. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:31`; `app/backend/src/app/ml/predictive_maintenance/features.py:37`
-
-### Q155. why useful: `rotational_speed_min`?
-
-`rotational_speed_min` uses `max(train min,1.0)` and captures safe denominator learned only from train. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:31`; `app/backend/src/app/ml/predictive_maintenance/features.py:37`
-
-### Q156. leakage prevention: `rotational_speed_min`?
-
-`rotational_speed_min` uses `max(train min,1.0)` and captures safe denominator learned only from train. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:31`; `app/backend/src/app/ml/predictive_maintenance/features.py:37`
-
-### Q157. what if removed: `rotational_speed_min`?
-
-`rotational_speed_min` uses `max(train min,1.0)` and captures safe denominator learned only from train. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:31`; `app/backend/src/app/ml/predictive_maintenance/features.py:37`
-
-### Q158. defense answer: `rotational_speed_min`?
-
-`rotational_speed_min` uses `max(train min,1.0)` and captures safe denominator learned only from train. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:31`; `app/backend/src/app/ml/predictive_maintenance/features.py:37`
-
-### Q159. formula: `air_temp_min`?
-
-`air_temp_min` uses `max(train min,1.0)` and captures safe denominator learned only from train. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:32`; `app/backend/src/app/ml/predictive_maintenance/features.py:38`
-
-### Q160. why useful: `air_temp_min`?
-
-`air_temp_min` uses `max(train min,1.0)` and captures safe denominator learned only from train. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:32`; `app/backend/src/app/ml/predictive_maintenance/features.py:38`
-
-### Q161. leakage prevention: `air_temp_min`?
-
-`air_temp_min` uses `max(train min,1.0)` and captures safe denominator learned only from train. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:32`; `app/backend/src/app/ml/predictive_maintenance/features.py:38`
-
-### Q162. what if removed: `air_temp_min`?
-
-`air_temp_min` uses `max(train min,1.0)` and captures safe denominator learned only from train. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:32`; `app/backend/src/app/ml/predictive_maintenance/features.py:38`
-
-### Q163. defense answer: `air_temp_min`?
-
-`air_temp_min` uses `max(train min,1.0)` and captures safe denominator learned only from train. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:32`; `app/backend/src/app/ml/predictive_maintenance/features.py:38`
-
-### Q164. formula: `_is_fitted`?
-
-`_is_fitted` uses `boolean guard` and captures prevents transform before fit. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:33`; `app/backend/src/app/ml/predictive_maintenance/features.py:46`
-
-### Q165. why useful: `_is_fitted`?
-
-`_is_fitted` uses `boolean guard` and captures prevents transform before fit. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:33`; `app/backend/src/app/ml/predictive_maintenance/features.py:46`
-
-### Q166. leakage prevention: `_is_fitted`?
-
-`_is_fitted` uses `boolean guard` and captures prevents transform before fit. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:33`; `app/backend/src/app/ml/predictive_maintenance/features.py:46`
-
-### Q167. what if removed: `_is_fitted`?
-
-`_is_fitted` uses `boolean guard` and captures prevents transform before fit. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:33`; `app/backend/src/app/ml/predictive_maintenance/features.py:46`
-
-### Q168. defense answer: `_is_fitted`?
-
-`_is_fitted` uses `boolean guard` and captures prevents transform before fit. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:33`; `app/backend/src/app/ml/predictive_maintenance/features.py:46`
-
-### Q169. formula: `fit_transform`?
-
-`fit_transform` uses `fit then transform` and captures convenience for training. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:55`
-
-### Q170. why useful: `fit_transform`?
-
-`fit_transform` uses `fit then transform` and captures convenience for training. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:55`
-
-### Q171. leakage prevention: `fit_transform`?
-
-`fit_transform` uses `fit then transform` and captures convenience for training. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:55`
-
-### Q172. what if removed: `fit_transform`?
-
-`fit_transform` uses `fit then transform` and captures convenience for training. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:55`
-
-### Q173. defense answer: `fit_transform`?
-
-`fit_transform` uses `fit then transform` and captures convenience for training. It is fitted after train/test split where needed, so test-set information does not influence training transformations.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:55`
-
-## Splitting and Balance
-
-### Q174. why chosen: `test_size=0.2`?
-
-`test_size=0.2` gives 20 percent held-out test data. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:67`; `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:75`
-
-### Q175. risk without it: `test_size=0.2`?
-
-`test_size=0.2` gives 20 percent held-out test data. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:67`; `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:75`
-
-### Q176. metric impact: `test_size=0.2`?
-
-`test_size=0.2` gives 20 percent held-out test data. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:67`; `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:75`
-
-### Q177. defense answer: `test_size=0.2`?
-
-`test_size=0.2` gives 20 percent held-out test data. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:67`; `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:75`
-
-### Q178. why chosen: `random_state=42`?
-
-`random_state=42` gives reproducible split. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:68`; `app/backend/src/app/ml/predictive_maintenance/train.py:47`
-
-### Q179. risk without it: `random_state=42`?
-
-`random_state=42` gives reproducible split. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:68`; `app/backend/src/app/ml/predictive_maintenance/train.py:47`
-
-### Q180. metric impact: `random_state=42`?
-
-`random_state=42` gives reproducible split. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:68`; `app/backend/src/app/ml/predictive_maintenance/train.py:47`
-
-### Q181. defense answer: `random_state=42`?
-
-`random_state=42` gives reproducible split. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:68`; `app/backend/src/app/ml/predictive_maintenance/train.py:47`
-
-### Q182. why chosen: `stratify=y`?
-
-`stratify=y` gives class proportions preserved. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
+It preserves the failure/non-failure ratio in both train and test splits.
 
 **File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:75`
 
-### Q183. risk without it: `stratify=y`?
+### Q50. Why use test_size=0.2?
 
-`stratify=y` gives class proportions preserved. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
+It keeps 80 percent for training and 20 percent for unseen evaluation, a practical tabular default.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:75`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:67`
 
-### Q184. metric impact: `stratify=y`?
+### Q51. Why use random_state=42?
 
-`stratify=y` gives class proportions preserved. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
+It makes splits and model randomness reproducible for defense and reruns.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:75`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:68`
 
-### Q185. defense answer: `stratify=y`?
+### Q52. What does temp_delta represent?
 
-`stratify=y` gives class proportions preserved. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
+It is process_temperature minus air_temperature, capturing thermal load above ambient conditions.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:75`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:49`
 
-### Q186. why chosen: `val_size=0.2`?
+### Q53. Is wear_rate a true physical wear rate?
 
-`val_size=0.2` gives ANN validation subset. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
+Not exactly. The code divides tool_wear by a training-set minimum speed, so it is a normalized proxy rather than wear per time or revolution.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:151`; `app/backend/src/app/ml/predictive_maintenance/pipeline.py:156`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:50`
 
-### Q187. risk without it: `val_size=0.2`?
+### Q54. Why use max(min_speed, 1.0)?
 
-`val_size=0.2` gives ANN validation subset. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
+It prevents division by zero or tiny denominators in ratio features.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:151`; `app/backend/src/app/ml/predictive_maintenance/pipeline.py:156`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:37`
 
-### Q188. metric impact: `val_size=0.2`?
+### Q55. Why does FeatureEngineer have _is_fitted?
 
-`val_size=0.2` gives ANN validation subset. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
+It prevents transformation before training-set statistics are captured.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:151`; `app/backend/src/app/ml/predictive_maintenance/pipeline.py:156`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:46`
 
-### Q189. defense answer: `val_size=0.2`?
+### Q56. Why split before feature engineering?
 
-`val_size=0.2` gives ANN validation subset. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
+It prevents test-set statistics from leaking into training transformations.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:151`; `app/backend/src/app/ml/predictive_maintenance/pipeline.py:156`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:45`
 
-### Q190. why chosen: `imbalance_ratio`?
+### Q57. Why return feature columns in a fixed order?
 
-`imbalance_ratio` gives failure rarity summary. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
+Training and inference must use the same feature order; otherwise predictions become invalid.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:52`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:59`
 
-### Q191. risk without it: `imbalance_ratio`?
+### Q58. Why include Logistic Regression?
 
-`imbalance_ratio` gives failure rarity summary. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
+It provides an interpretable baseline for binary classification.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:52`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:62`
 
-### Q192. metric impact: `imbalance_ratio`?
+### Q59. Why use solver='liblinear'?
 
-`imbalance_ratio` gives failure rarity summary. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:52`
-
-### Q193. defense answer: `imbalance_ratio`?
-
-`imbalance_ratio` gives failure rarity summary. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:52`
-
-### Q194. why chosen: `warning if >10`?
-
-`warning if >10` gives flags severe imbalance. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:51`
-
-### Q195. risk without it: `warning if >10`?
-
-`warning if >10` gives flags severe imbalance. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:51`
-
-### Q196. metric impact: `warning if >10`?
-
-`warning if >10` gives flags severe imbalance. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:51`
-
-### Q197. defense answer: `warning if >10`?
-
-`warning if >10` gives flags severe imbalance. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:51`
-
-### Q198. why chosen: `train_test_split`?
-
-`train_test_split` gives standard partition function. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:6`; `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:74`
-
-### Q199. risk without it: `train_test_split`?
-
-`train_test_split` gives standard partition function. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:6`; `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:74`
-
-### Q200. metric impact: `train_test_split`?
-
-`train_test_split` gives standard partition function. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:6`; `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:74`
-
-### Q201. defense answer: `train_test_split`?
-
-`train_test_split` gives standard partition function. Predictive maintenance labels are often imbalanced, so the split must be reproducible and representative before evaluating F1, recall, precision, and ROC-AUC.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:6`; `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:74`
-
-## StandardScaler
-
-### Q202. why used: `StandardScaler`?
-
-`StandardScaler` standardizes features. It is crucial for gradient/linear models because large-scale features can dominate optimization. Tree models need it less, but the common pipeline keeps comparison consistent.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:10`; `app/backend/src/app/ml/predictive_maintenance/train.py:59`
-
-### Q203. formula link: `StandardScaler`?
-
-`StandardScaler` standardizes features. It is crucial for gradient/linear models because large-scale features can dominate optimization. Tree models need it less, but the common pipeline keeps comparison consistent.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:10`; `app/backend/src/app/ml/predictive_maintenance/train.py:59`
-
-### Q204. effect on Logistic Regression: `StandardScaler`?
-
-`StandardScaler` standardizes features. It is crucial for gradient/linear models because large-scale features can dominate optimization. Tree models need it less, but the common pipeline keeps comparison consistent.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:10`; `app/backend/src/app/ml/predictive_maintenance/train.py:59`
-
-### Q205. effect on ANN: `StandardScaler`?
-
-`StandardScaler` standardizes features. It is crucial for gradient/linear models because large-scale features can dominate optimization. Tree models need it less, but the common pipeline keeps comparison consistent.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:10`; `app/backend/src/app/ml/predictive_maintenance/train.py:59`
-
-### Q206. effect on trees: `StandardScaler`?
-
-`StandardScaler` standardizes features. It is crucial for gradient/linear models because large-scale features can dominate optimization. Tree models need it less, but the common pipeline keeps comparison consistent.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:10`; `app/backend/src/app/ml/predictive_maintenance/train.py:59`
-
-### Q207. why used: `with_mean=True default`?
-
-`with_mean=True default` subtracts mean. It is crucial for gradient/linear models because large-scale features can dominate optimization. Tree models need it less, but the common pipeline keeps comparison consistent.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:59`
-
-### Q208. formula link: `with_mean=True default`?
-
-`with_mean=True default` subtracts mean. It is crucial for gradient/linear models because large-scale features can dominate optimization. Tree models need it less, but the common pipeline keeps comparison consistent.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:59`
-
-### Q209. effect on Logistic Regression: `with_mean=True default`?
-
-`with_mean=True default` subtracts mean. It is crucial for gradient/linear models because large-scale features can dominate optimization. Tree models need it less, but the common pipeline keeps comparison consistent.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:59`
-
-### Q210. effect on ANN: `with_mean=True default`?
-
-`with_mean=True default` subtracts mean. It is crucial for gradient/linear models because large-scale features can dominate optimization. Tree models need it less, but the common pipeline keeps comparison consistent.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:59`
-
-### Q211. effect on trees: `with_mean=True default`?
-
-`with_mean=True default` subtracts mean. It is crucial for gradient/linear models because large-scale features can dominate optimization. Tree models need it less, but the common pipeline keeps comparison consistent.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:59`
-
-### Q212. why used: `with_std=True default`?
-
-`with_std=True default` divides by std. It is crucial for gradient/linear models because large-scale features can dominate optimization. Tree models need it less, but the common pipeline keeps comparison consistent.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:59`
-
-### Q213. formula link: `with_std=True default`?
-
-`with_std=True default` divides by std. It is crucial for gradient/linear models because large-scale features can dominate optimization. Tree models need it less, but the common pipeline keeps comparison consistent.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:59`
-
-### Q214. effect on Logistic Regression: `with_std=True default`?
-
-`with_std=True default` divides by std. It is crucial for gradient/linear models because large-scale features can dominate optimization. Tree models need it less, but the common pipeline keeps comparison consistent.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:59`
-
-### Q215. effect on ANN: `with_std=True default`?
-
-`with_std=True default` divides by std. It is crucial for gradient/linear models because large-scale features can dominate optimization. Tree models need it less, but the common pipeline keeps comparison consistent.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:59`
-
-### Q216. effect on trees: `with_std=True default`?
-
-`with_std=True default` divides by std. It is crucial for gradient/linear models because large-scale features can dominate optimization. Tree models need it less, but the common pipeline keeps comparison consistent.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:59`
-
-### Q217. why used: `Pipeline scaler step`?
-
-`Pipeline scaler step` binds preprocessing to estimator. It is crucial for gradient/linear models because large-scale features can dominate optimization. Tree models need it less, but the common pipeline keeps comparison consistent.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:57`; `app/backend/src/app/ml/predictive_maintenance/train.py:59`
-
-### Q218. formula link: `Pipeline scaler step`?
-
-`Pipeline scaler step` binds preprocessing to estimator. It is crucial for gradient/linear models because large-scale features can dominate optimization. Tree models need it less, but the common pipeline keeps comparison consistent.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:57`; `app/backend/src/app/ml/predictive_maintenance/train.py:59`
-
-### Q219. effect on Logistic Regression: `Pipeline scaler step`?
-
-`Pipeline scaler step` binds preprocessing to estimator. It is crucial for gradient/linear models because large-scale features can dominate optimization. Tree models need it less, but the common pipeline keeps comparison consistent.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:57`; `app/backend/src/app/ml/predictive_maintenance/train.py:59`
-
-### Q220. effect on ANN: `Pipeline scaler step`?
-
-`Pipeline scaler step` binds preprocessing to estimator. It is crucial for gradient/linear models because large-scale features can dominate optimization. Tree models need it less, but the common pipeline keeps comparison consistent.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:57`; `app/backend/src/app/ml/predictive_maintenance/train.py:59`
-
-### Q221. effect on trees: `Pipeline scaler step`?
-
-`Pipeline scaler step` binds preprocessing to estimator. It is crucial for gradient/linear models because large-scale features can dominate optimization. Tree models need it less, but the common pipeline keeps comparison consistent.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:57`; `app/backend/src/app/ml/predictive_maintenance/train.py:59`
-
-### Q222. why used: `z=(x-mean)/std`?
-
-`z=(x-mean)/std` scaling formula. It is crucial for gradient/linear models because large-scale features can dominate optimization. Tree models need it less, but the common pipeline keeps comparison consistent.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:59`
-
-### Q223. formula link: `z=(x-mean)/std`?
-
-`z=(x-mean)/std` scaling formula. It is crucial for gradient/linear models because large-scale features can dominate optimization. Tree models need it less, but the common pipeline keeps comparison consistent.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:59`
-
-### Q224. effect on Logistic Regression: `z=(x-mean)/std`?
-
-`z=(x-mean)/std` scaling formula. It is crucial for gradient/linear models because large-scale features can dominate optimization. Tree models need it less, but the common pipeline keeps comparison consistent.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:59`
-
-### Q225. effect on ANN: `z=(x-mean)/std`?
-
-`z=(x-mean)/std` scaling formula. It is crucial for gradient/linear models because large-scale features can dominate optimization. Tree models need it less, but the common pipeline keeps comparison consistent.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:59`
-
-### Q226. effect on trees: `z=(x-mean)/std`?
-
-`z=(x-mean)/std` scaling formula. It is crucial for gradient/linear models because large-scale features can dominate optimization. Tree models need it less, but the common pipeline keeps comparison consistent.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:59`
-
-## Logistic Regression
-
-### Q227. why used: `solver=liblinear`?
-
-In Logistic Regression, `solver=liblinear` means small/medium binary solver. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
+It is a reliable solver for smaller binary classification problems.
 
 **File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:63`
 
-### Q228. algorithm formula: `solver=liblinear`?
+### Q60. Why use L2 regularization?
 
-In Logistic Regression, `solver=liblinear` means small/medium binary solver. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:63`
-
-### Q229. chosen value reasoning: `solver=liblinear`?
-
-In Logistic Regression, `solver=liblinear` means small/medium binary solver. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:63`
-
-### Q230. overfitting impact: `solver=liblinear`?
-
-In Logistic Regression, `solver=liblinear` means small/medium binary solver. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:63`
-
-### Q231. what to tune: `solver=liblinear`?
-
-In Logistic Regression, `solver=liblinear` means small/medium binary solver. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:63`
-
-### Q232. viva defense: `solver=liblinear`?
-
-In Logistic Regression, `solver=liblinear` means small/medium binary solver. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:63`
-
-### Q233. why used: `penalty=l2`?
-
-In Logistic Regression, `penalty=l2` means weight shrinkage. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
+L2 discourages large coefficients and reduces overfitting.
 
 **File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:64`
 
-### Q234. algorithm formula: `penalty=l2`?
+### Q61. Why set max_iter=1000?
 
-In Logistic Regression, `penalty=l2` means weight shrinkage. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:64`
-
-### Q235. chosen value reasoning: `penalty=l2`?
-
-In Logistic Regression, `penalty=l2` means weight shrinkage. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:64`
-
-### Q236. overfitting impact: `penalty=l2`?
-
-In Logistic Regression, `penalty=l2` means weight shrinkage. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:64`
-
-### Q237. what to tune: `penalty=l2`?
-
-In Logistic Regression, `penalty=l2` means weight shrinkage. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:64`
-
-### Q238. viva defense: `penalty=l2`?
-
-In Logistic Regression, `penalty=l2` means weight shrinkage. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:64`
-
-### Q239. why used: `max_iter=1000`?
-
-In Logistic Regression, `max_iter=1000` means more convergence iterations. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
+It gives the optimizer enough iterations to converge after scaling.
 
 **File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:66`
 
-### Q240. algorithm formula: `max_iter=1000`?
+### Q62. Why include Random Forest?
 
-In Logistic Regression, `max_iter=1000` means more convergence iterations. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
+It captures nonlinear thresholds and interactions among machine sensor features.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:66`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76`
 
-### Q241. chosen value reasoning: `max_iter=1000`?
+### Q63. Why use 200 trees in Random Forest?
 
-In Logistic Regression, `max_iter=1000` means more convergence iterations. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
+Two hundred trees is a stable default that reduces variance without excessive cost.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:66`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:77`
 
-### Q242. overfitting impact: `max_iter=1000`?
+### Q64. Why cap Random Forest max_depth at 12?
 
-In Logistic Regression, `max_iter=1000` means more convergence iterations. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:66`
-
-### Q243. what to tune: `max_iter=1000`?
-
-In Logistic Regression, `max_iter=1000` means more convergence iterations. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:66`
-
-### Q244. viva defense: `max_iter=1000`?
-
-In Logistic Regression, `max_iter=1000` means more convergence iterations. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:66`
-
-### Q245. why used: `random_state=42`?
-
-In Logistic Regression, `random_state=42` means reproducibility. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:68`; `app/backend/src/app/ml/predictive_maintenance/train.py:47`
-
-### Q246. algorithm formula: `random_state=42`?
-
-In Logistic Regression, `random_state=42` means reproducibility. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:68`; `app/backend/src/app/ml/predictive_maintenance/train.py:47`
-
-### Q247. chosen value reasoning: `random_state=42`?
-
-In Logistic Regression, `random_state=42` means reproducibility. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:68`; `app/backend/src/app/ml/predictive_maintenance/train.py:47`
-
-### Q248. overfitting impact: `random_state=42`?
-
-In Logistic Regression, `random_state=42` means reproducibility. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:68`; `app/backend/src/app/ml/predictive_maintenance/train.py:47`
-
-### Q249. what to tune: `random_state=42`?
-
-In Logistic Regression, `random_state=42` means reproducibility. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:68`; `app/backend/src/app/ml/predictive_maintenance/train.py:47`
-
-### Q250. viva defense: `random_state=42`?
-
-In Logistic Regression, `random_state=42` means reproducibility. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:68`; `app/backend/src/app/ml/predictive_maintenance/train.py:47`
-
-### Q251. why used: `sigmoid`?
-
-In Logistic Regression, `sigmoid` means probability mapping. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:35`
-
-### Q252. algorithm formula: `sigmoid`?
-
-In Logistic Regression, `sigmoid` means probability mapping. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:35`
-
-### Q253. chosen value reasoning: `sigmoid`?
-
-In Logistic Regression, `sigmoid` means probability mapping. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:35`
-
-### Q254. overfitting impact: `sigmoid`?
-
-In Logistic Regression, `sigmoid` means probability mapping. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:35`
-
-### Q255. what to tune: `sigmoid`?
-
-In Logistic Regression, `sigmoid` means probability mapping. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:35`
-
-### Q256. viva defense: `sigmoid`?
-
-In Logistic Regression, `sigmoid` means probability mapping. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:35`
-
-### Q257. why used: `baseline`?
-
-In Logistic Regression, `baseline` means interpretable benchmark. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:56`
-
-### Q258. algorithm formula: `baseline`?
-
-In Logistic Regression, `baseline` means interpretable benchmark. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:56`
-
-### Q259. chosen value reasoning: `baseline`?
-
-In Logistic Regression, `baseline` means interpretable benchmark. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:56`
-
-### Q260. overfitting impact: `baseline`?
-
-In Logistic Regression, `baseline` means interpretable benchmark. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:56`
-
-### Q261. what to tune: `baseline`?
-
-In Logistic Regression, `baseline` means interpretable benchmark. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:56`
-
-### Q262. viva defense: `baseline`?
-
-In Logistic Regression, `baseline` means interpretable benchmark. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:56`
-
-## Random Forest
-
-### Q263. why used: `n_estimators=200`?
-
-In Random Forest, `n_estimators=200` means stable tree averaging. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:77`; `app/backend/src/app/ml/predictive_maintenance/train.py:91`
-
-### Q264. algorithm formula: `n_estimators=200`?
-
-In Random Forest, `n_estimators=200` means stable tree averaging. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:77`; `app/backend/src/app/ml/predictive_maintenance/train.py:91`
-
-### Q265. chosen value reasoning: `n_estimators=200`?
-
-In Random Forest, `n_estimators=200` means stable tree averaging. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:77`; `app/backend/src/app/ml/predictive_maintenance/train.py:91`
-
-### Q266. overfitting impact: `n_estimators=200`?
-
-In Random Forest, `n_estimators=200` means stable tree averaging. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:77`; `app/backend/src/app/ml/predictive_maintenance/train.py:91`
-
-### Q267. what to tune: `n_estimators=200`?
-
-In Random Forest, `n_estimators=200` means stable tree averaging. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:77`; `app/backend/src/app/ml/predictive_maintenance/train.py:91`
-
-### Q268. viva defense: `n_estimators=200`?
-
-In Random Forest, `n_estimators=200` means stable tree averaging. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:77`; `app/backend/src/app/ml/predictive_maintenance/train.py:91`
-
-### Q269. why used: `max_depth=12`?
-
-In Random Forest, `max_depth=12` means limits overfitting. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
+Depth control reduces memorization while allowing nonlinear rules.
 
 **File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:78`
 
-### Q270. algorithm formula: `max_depth=12`?
+### Q65. Why include XGBoost?
 
-In Random Forest, `max_depth=12` means limits overfitting. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:78`
-
-### Q271. chosen value reasoning: `max_depth=12`?
-
-In Random Forest, `max_depth=12` means limits overfitting. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:78`
-
-### Q272. overfitting impact: `max_depth=12`?
-
-In Random Forest, `max_depth=12` means limits overfitting. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:78`
-
-### Q273. what to tune: `max_depth=12`?
-
-In Random Forest, `max_depth=12` means limits overfitting. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:78`
-
-### Q274. viva defense: `max_depth=12`?
-
-In Random Forest, `max_depth=12` means limits overfitting. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:78`
-
-### Q275. why used: `random_state=42`?
-
-In Random Forest, `random_state=42` means reproducible randomness. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:68`; `app/backend/src/app/ml/predictive_maintenance/train.py:47`
-
-### Q276. algorithm formula: `random_state=42`?
-
-In Random Forest, `random_state=42` means reproducible randomness. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:68`; `app/backend/src/app/ml/predictive_maintenance/train.py:47`
-
-### Q277. chosen value reasoning: `random_state=42`?
-
-In Random Forest, `random_state=42` means reproducible randomness. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:68`; `app/backend/src/app/ml/predictive_maintenance/train.py:47`
-
-### Q278. overfitting impact: `random_state=42`?
-
-In Random Forest, `random_state=42` means reproducible randomness. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:68`; `app/backend/src/app/ml/predictive_maintenance/train.py:47`
-
-### Q279. what to tune: `random_state=42`?
-
-In Random Forest, `random_state=42` means reproducible randomness. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:68`; `app/backend/src/app/ml/predictive_maintenance/train.py:47`
-
-### Q280. viva defense: `random_state=42`?
-
-In Random Forest, `random_state=42` means reproducible randomness. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:68`; `app/backend/src/app/ml/predictive_maintenance/train.py:47`
-
-### Q281. why used: `n_jobs=-1`?
-
-In Random Forest, `n_jobs=-1` means all CPU cores. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:80`; `app/backend/src/app/ml/predictive_maintenance/train.py:97`
-
-### Q282. algorithm formula: `n_jobs=-1`?
-
-In Random Forest, `n_jobs=-1` means all CPU cores. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:80`; `app/backend/src/app/ml/predictive_maintenance/train.py:97`
-
-### Q283. chosen value reasoning: `n_jobs=-1`?
-
-In Random Forest, `n_jobs=-1` means all CPU cores. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:80`; `app/backend/src/app/ml/predictive_maintenance/train.py:97`
-
-### Q284. overfitting impact: `n_jobs=-1`?
-
-In Random Forest, `n_jobs=-1` means all CPU cores. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:80`; `app/backend/src/app/ml/predictive_maintenance/train.py:97`
-
-### Q285. what to tune: `n_jobs=-1`?
-
-In Random Forest, `n_jobs=-1` means all CPU cores. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:80`; `app/backend/src/app/ml/predictive_maintenance/train.py:97`
-
-### Q286. viva defense: `n_jobs=-1`?
-
-In Random Forest, `n_jobs=-1` means all CPU cores. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:80`; `app/backend/src/app/ml/predictive_maintenance/train.py:97`
-
-### Q287. why used: `bootstrap default`?
-
-In Random Forest, `bootstrap default` means tree diversity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76`
-
-### Q288. algorithm formula: `bootstrap default`?
-
-In Random Forest, `bootstrap default` means tree diversity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76`
-
-### Q289. chosen value reasoning: `bootstrap default`?
-
-In Random Forest, `bootstrap default` means tree diversity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76`
-
-### Q290. overfitting impact: `bootstrap default`?
-
-In Random Forest, `bootstrap default` means tree diversity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76`
-
-### Q291. what to tune: `bootstrap default`?
-
-In Random Forest, `bootstrap default` means tree diversity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76`
-
-### Q292. viva defense: `bootstrap default`?
-
-In Random Forest, `bootstrap default` means tree diversity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76`
-
-### Q293. why used: `Gini default`?
-
-In Random Forest, `Gini default` means split impurity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76`
-
-### Q294. algorithm formula: `Gini default`?
-
-In Random Forest, `Gini default` means split impurity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76`
-
-### Q295. chosen value reasoning: `Gini default`?
-
-In Random Forest, `Gini default` means split impurity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76`
-
-### Q296. overfitting impact: `Gini default`?
-
-In Random Forest, `Gini default` means split impurity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76`
-
-### Q297. what to tune: `Gini default`?
-
-In Random Forest, `Gini default` means split impurity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76`
-
-### Q298. viva defense: `Gini default`?
-
-In Random Forest, `Gini default` means split impurity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76`
-
-### Q299. why used: `predict_proba`?
-
-In Random Forest, `predict_proba` means probability from trees. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:39`
-
-### Q300. algorithm formula: `predict_proba`?
-
-In Random Forest, `predict_proba` means probability from trees. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:39`
-
-### Q301. chosen value reasoning: `predict_proba`?
-
-In Random Forest, `predict_proba` means probability from trees. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:39`
-
-### Q302. overfitting impact: `predict_proba`?
-
-In Random Forest, `predict_proba` means probability from trees. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:39`
-
-### Q303. what to tune: `predict_proba`?
-
-In Random Forest, `predict_proba` means probability from trees. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:39`
-
-### Q304. viva defense: `predict_proba`?
-
-In Random Forest, `predict_proba` means probability from trees. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:39`
-
-## XGBoost
-
-### Q305. why used: `n_estimators=200`?
-
-In XGBoost, `n_estimators=200` means 200 boosting rounds. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:77`; `app/backend/src/app/ml/predictive_maintenance/train.py:91`
-
-### Q306. algorithm formula: `n_estimators=200`?
-
-In XGBoost, `n_estimators=200` means 200 boosting rounds. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:77`; `app/backend/src/app/ml/predictive_maintenance/train.py:91`
-
-### Q307. chosen value reasoning: `n_estimators=200`?
-
-In XGBoost, `n_estimators=200` means 200 boosting rounds. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:77`; `app/backend/src/app/ml/predictive_maintenance/train.py:91`
-
-### Q308. overfitting impact: `n_estimators=200`?
-
-In XGBoost, `n_estimators=200` means 200 boosting rounds. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:77`; `app/backend/src/app/ml/predictive_maintenance/train.py:91`
-
-### Q309. what to tune: `n_estimators=200`?
-
-In XGBoost, `n_estimators=200` means 200 boosting rounds. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:77`; `app/backend/src/app/ml/predictive_maintenance/train.py:91`
-
-### Q310. viva defense: `n_estimators=200`?
-
-In XGBoost, `n_estimators=200` means 200 boosting rounds. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:77`; `app/backend/src/app/ml/predictive_maintenance/train.py:91`
-
-### Q311. why used: `max_depth=6`?
-
-In XGBoost, `max_depth=6` means moderate tree complexity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:92`
-
-### Q312. algorithm formula: `max_depth=6`?
-
-In XGBoost, `max_depth=6` means moderate tree complexity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:92`
-
-### Q313. chosen value reasoning: `max_depth=6`?
-
-In XGBoost, `max_depth=6` means moderate tree complexity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:92`
-
-### Q314. overfitting impact: `max_depth=6`?
-
-In XGBoost, `max_depth=6` means moderate tree complexity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:92`
-
-### Q315. what to tune: `max_depth=6`?
-
-In XGBoost, `max_depth=6` means moderate tree complexity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:92`
-
-### Q316. viva defense: `max_depth=6`?
-
-In XGBoost, `max_depth=6` means moderate tree complexity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:92`
-
-### Q317. why used: `learning_rate=0.1`?
-
-In XGBoost, `learning_rate=0.1` means shrinkage/eta. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:93`
-
-### Q318. algorithm formula: `learning_rate=0.1`?
-
-In XGBoost, `learning_rate=0.1` means shrinkage/eta. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:93`
-
-### Q319. chosen value reasoning: `learning_rate=0.1`?
-
-In XGBoost, `learning_rate=0.1` means shrinkage/eta. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:93`
-
-### Q320. overfitting impact: `learning_rate=0.1`?
-
-In XGBoost, `learning_rate=0.1` means shrinkage/eta. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:93`
-
-### Q321. what to tune: `learning_rate=0.1`?
-
-In XGBoost, `learning_rate=0.1` means shrinkage/eta. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:93`
-
-### Q322. viva defense: `learning_rate=0.1`?
-
-In XGBoost, `learning_rate=0.1` means shrinkage/eta. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:93`
-
-### Q323. why used: `eval_metric=logloss`?
-
-In XGBoost, `eval_metric=logloss` means probability loss. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:95`
-
-### Q324. algorithm formula: `eval_metric=logloss`?
-
-In XGBoost, `eval_metric=logloss` means probability loss. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:95`
-
-### Q325. chosen value reasoning: `eval_metric=logloss`?
-
-In XGBoost, `eval_metric=logloss` means probability loss. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:95`
-
-### Q326. overfitting impact: `eval_metric=logloss`?
-
-In XGBoost, `eval_metric=logloss` means probability loss. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:95`
-
-### Q327. what to tune: `eval_metric=logloss`?
-
-In XGBoost, `eval_metric=logloss` means probability loss. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:95`
-
-### Q328. viva defense: `eval_metric=logloss`?
-
-In XGBoost, `eval_metric=logloss` means probability loss. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:95`
-
-### Q329. why used: `use_label_encoder=False`?
-
-In XGBoost, `use_label_encoder=False` means avoid deprecated encoder. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:94`
-
-### Q330. algorithm formula: `use_label_encoder=False`?
-
-In XGBoost, `use_label_encoder=False` means avoid deprecated encoder. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:94`
-
-### Q331. chosen value reasoning: `use_label_encoder=False`?
-
-In XGBoost, `use_label_encoder=False` means avoid deprecated encoder. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:94`
-
-### Q332. overfitting impact: `use_label_encoder=False`?
-
-In XGBoost, `use_label_encoder=False` means avoid deprecated encoder. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:94`
-
-### Q333. what to tune: `use_label_encoder=False`?
-
-In XGBoost, `use_label_encoder=False` means avoid deprecated encoder. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:94`
-
-### Q334. viva defense: `use_label_encoder=False`?
-
-In XGBoost, `use_label_encoder=False` means avoid deprecated encoder. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:94`
-
-### Q335. why used: `random_state=42`?
-
-In XGBoost, `random_state=42` means reproducible. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:68`; `app/backend/src/app/ml/predictive_maintenance/train.py:47`
-
-### Q336. algorithm formula: `random_state=42`?
-
-In XGBoost, `random_state=42` means reproducible. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:68`; `app/backend/src/app/ml/predictive_maintenance/train.py:47`
-
-### Q337. chosen value reasoning: `random_state=42`?
-
-In XGBoost, `random_state=42` means reproducible. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:68`; `app/backend/src/app/ml/predictive_maintenance/train.py:47`
-
-### Q338. overfitting impact: `random_state=42`?
-
-In XGBoost, `random_state=42` means reproducible. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:68`; `app/backend/src/app/ml/predictive_maintenance/train.py:47`
-
-### Q339. what to tune: `random_state=42`?
-
-In XGBoost, `random_state=42` means reproducible. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:68`; `app/backend/src/app/ml/predictive_maintenance/train.py:47`
-
-### Q340. viva defense: `random_state=42`?
-
-In XGBoost, `random_state=42` means reproducible. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:68`; `app/backend/src/app/ml/predictive_maintenance/train.py:47`
-
-### Q341. why used: `n_jobs=-1`?
-
-In XGBoost, `n_jobs=-1` means parallelism. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:80`; `app/backend/src/app/ml/predictive_maintenance/train.py:97`
-
-### Q342. algorithm formula: `n_jobs=-1`?
-
-In XGBoost, `n_jobs=-1` means parallelism. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:80`; `app/backend/src/app/ml/predictive_maintenance/train.py:97`
-
-### Q343. chosen value reasoning: `n_jobs=-1`?
-
-In XGBoost, `n_jobs=-1` means parallelism. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:80`; `app/backend/src/app/ml/predictive_maintenance/train.py:97`
-
-### Q344. overfitting impact: `n_jobs=-1`?
-
-In XGBoost, `n_jobs=-1` means parallelism. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:80`; `app/backend/src/app/ml/predictive_maintenance/train.py:97`
-
-### Q345. what to tune: `n_jobs=-1`?
-
-In XGBoost, `n_jobs=-1` means parallelism. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:80`; `app/backend/src/app/ml/predictive_maintenance/train.py:97`
-
-### Q346. viva defense: `n_jobs=-1`?
-
-In XGBoost, `n_jobs=-1` means parallelism. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:80`; `app/backend/src/app/ml/predictive_maintenance/train.py:97`
-
-### Q347. why used: `regularized objective`?
-
-In XGBoost, `regularized objective` means loss plus complexity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
+Boosted trees are highly competitive for structured tabular data and correct previous errors sequentially.
 
 **File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:90`
 
-### Q348. algorithm formula: `regularized objective`?
+### Q66. Why use XGBoost learning_rate=0.1?
 
-In XGBoost, `regularized objective` means loss plus complexity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
+The learning rate shrinks each tree contribution and is a common balanced default.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:90`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:93`
 
-### Q349. chosen value reasoning: `regularized objective`?
+### Q67. Why use eval_metric='logloss'?
 
-In XGBoost, `regularized objective` means loss plus complexity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
+Log loss evaluates probability quality for binary classification.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:90`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:95`
 
-### Q350. overfitting impact: `regularized objective`?
+### Q68. Why does the ANN use Dense(1, sigmoid)?
 
-In XGBoost, `regularized objective` means loss plus complexity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:90`
-
-### Q351. what to tune: `regularized objective`?
-
-In XGBoost, `regularized objective` means loss plus complexity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:90`
-
-### Q352. viva defense: `regularized objective`?
-
-In XGBoost, `regularized objective` means loss plus complexity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:90`
-
-## ANN
-
-### Q353. why used: `Sequential`?
-
-In ANN, `Sequential` means layer stack. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:12`; `app/backend/src/app/ml/predictive_maintenance/train.py:24`
-
-### Q354. algorithm formula: `Sequential`?
-
-In ANN, `Sequential` means layer stack. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:12`; `app/backend/src/app/ml/predictive_maintenance/train.py:24`
-
-### Q355. chosen value reasoning: `Sequential`?
-
-In ANN, `Sequential` means layer stack. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:12`; `app/backend/src/app/ml/predictive_maintenance/train.py:24`
-
-### Q356. overfitting impact: `Sequential`?
-
-In ANN, `Sequential` means layer stack. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:12`; `app/backend/src/app/ml/predictive_maintenance/train.py:24`
-
-### Q357. what to tune: `Sequential`?
-
-In ANN, `Sequential` means layer stack. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:12`; `app/backend/src/app/ml/predictive_maintenance/train.py:24`
-
-### Q358. viva defense: `Sequential`?
-
-In ANN, `Sequential` means layer stack. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:12`; `app/backend/src/app/ml/predictive_maintenance/train.py:24`
-
-### Q359. why used: `Dense(64)`?
-
-In ANN, `Dense(64)` means first hidden capacity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:31`
-
-### Q360. algorithm formula: `Dense(64)`?
-
-In ANN, `Dense(64)` means first hidden capacity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:31`
-
-### Q361. chosen value reasoning: `Dense(64)`?
-
-In ANN, `Dense(64)` means first hidden capacity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:31`
-
-### Q362. overfitting impact: `Dense(64)`?
-
-In ANN, `Dense(64)` means first hidden capacity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:31`
-
-### Q363. what to tune: `Dense(64)`?
-
-In ANN, `Dense(64)` means first hidden capacity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:31`
-
-### Q364. viva defense: `Dense(64)`?
-
-In ANN, `Dense(64)` means first hidden capacity. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:31`
-
-### Q365. why used: `relu`?
-
-In ANN, `relu` means nonlinear activation. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:31`; `app/backend/src/app/ml/predictive_maintenance/train.py:33`
-
-### Q366. algorithm formula: `relu`?
-
-In ANN, `relu` means nonlinear activation. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:31`; `app/backend/src/app/ml/predictive_maintenance/train.py:33`
-
-### Q367. chosen value reasoning: `relu`?
-
-In ANN, `relu` means nonlinear activation. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:31`; `app/backend/src/app/ml/predictive_maintenance/train.py:33`
-
-### Q368. overfitting impact: `relu`?
-
-In ANN, `relu` means nonlinear activation. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:31`; `app/backend/src/app/ml/predictive_maintenance/train.py:33`
-
-### Q369. what to tune: `relu`?
-
-In ANN, `relu` means nonlinear activation. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:31`; `app/backend/src/app/ml/predictive_maintenance/train.py:33`
-
-### Q370. viva defense: `relu`?
-
-In ANN, `relu` means nonlinear activation. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:31`; `app/backend/src/app/ml/predictive_maintenance/train.py:33`
-
-### Q371. why used: `input_shape=(n_features,)`?
-
-In ANN, `input_shape=(n_features,)` means feature dimension. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:31`
-
-### Q372. algorithm formula: `input_shape=(n_features,)`?
-
-In ANN, `input_shape=(n_features,)` means feature dimension. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:31`
-
-### Q373. chosen value reasoning: `input_shape=(n_features,)`?
-
-In ANN, `input_shape=(n_features,)` means feature dimension. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:31`
-
-### Q374. overfitting impact: `input_shape=(n_features,)`?
-
-In ANN, `input_shape=(n_features,)` means feature dimension. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:31`
-
-### Q375. what to tune: `input_shape=(n_features,)`?
-
-In ANN, `input_shape=(n_features,)` means feature dimension. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:31`
-
-### Q376. viva defense: `input_shape=(n_features,)`?
-
-In ANN, `input_shape=(n_features,)` means feature dimension. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:31`
-
-### Q377. why used: `Dropout(0.2)`?
-
-In ANN, `Dropout(0.2)` means 20 percent regularization. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:32`
-
-### Q378. algorithm formula: `Dropout(0.2)`?
-
-In ANN, `Dropout(0.2)` means 20 percent regularization. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:32`
-
-### Q379. chosen value reasoning: `Dropout(0.2)`?
-
-In ANN, `Dropout(0.2)` means 20 percent regularization. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:32`
-
-### Q380. overfitting impact: `Dropout(0.2)`?
-
-In ANN, `Dropout(0.2)` means 20 percent regularization. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:32`
-
-### Q381. what to tune: `Dropout(0.2)`?
-
-In ANN, `Dropout(0.2)` means 20 percent regularization. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:32`
-
-### Q382. viva defense: `Dropout(0.2)`?
-
-In ANN, `Dropout(0.2)` means 20 percent regularization. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:32`
-
-### Q383. why used: `Dense(32)`?
-
-In ANN, `Dense(32)` means compressed hidden layer. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:33`
-
-### Q384. algorithm formula: `Dense(32)`?
-
-In ANN, `Dense(32)` means compressed hidden layer. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:33`
-
-### Q385. chosen value reasoning: `Dense(32)`?
-
-In ANN, `Dense(32)` means compressed hidden layer. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:33`
-
-### Q386. overfitting impact: `Dense(32)`?
-
-In ANN, `Dense(32)` means compressed hidden layer. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:33`
-
-### Q387. what to tune: `Dense(32)`?
-
-In ANN, `Dense(32)` means compressed hidden layer. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:33`
-
-### Q388. viva defense: `Dense(32)`?
-
-In ANN, `Dense(32)` means compressed hidden layer. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:33`
-
-### Q389. why used: `Dropout(0.1)`?
-
-In ANN, `Dropout(0.1)` means lighter regularization. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:34`
-
-### Q390. algorithm formula: `Dropout(0.1)`?
-
-In ANN, `Dropout(0.1)` means lighter regularization. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:34`
-
-### Q391. chosen value reasoning: `Dropout(0.1)`?
-
-In ANN, `Dropout(0.1)` means lighter regularization. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:34`
-
-### Q392. overfitting impact: `Dropout(0.1)`?
-
-In ANN, `Dropout(0.1)` means lighter regularization. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:34`
-
-### Q393. what to tune: `Dropout(0.1)`?
-
-In ANN, `Dropout(0.1)` means lighter regularization. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:34`
-
-### Q394. viva defense: `Dropout(0.1)`?
-
-In ANN, `Dropout(0.1)` means lighter regularization. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:34`
-
-### Q395. why used: `Dense(1)`?
-
-In ANN, `Dense(1)` means binary output. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
+A single sigmoid neuron outputs the positive-class probability.
 
 **File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:35`
 
-### Q396. algorithm formula: `Dense(1)`?
+### Q69. Why use binary_crossentropy?
 
-In ANN, `Dense(1)` means binary output. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:35`
-
-### Q397. chosen value reasoning: `Dense(1)`?
-
-In ANN, `Dense(1)` means binary output. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:35`
-
-### Q398. overfitting impact: `Dense(1)`?
-
-In ANN, `Dense(1)` means binary output. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:35`
-
-### Q399. what to tune: `Dense(1)`?
-
-In ANN, `Dense(1)` means binary output. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:35`
-
-### Q400. viva defense: `Dense(1)`?
-
-In ANN, `Dense(1)` means binary output. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:35`
-
-### Q401. why used: `sigmoid`?
-
-In ANN, `sigmoid` means probability output. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:35`
-
-### Q402. algorithm formula: `sigmoid`?
-
-In ANN, `sigmoid` means probability output. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:35`
-
-### Q403. chosen value reasoning: `sigmoid`?
-
-In ANN, `sigmoid` means probability output. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:35`
-
-### Q404. overfitting impact: `sigmoid`?
-
-In ANN, `sigmoid` means probability output. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:35`
-
-### Q405. what to tune: `sigmoid`?
-
-In ANN, `sigmoid` means probability output. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:35`
-
-### Q406. viva defense: `sigmoid`?
-
-In ANN, `sigmoid` means probability output. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:35`
-
-### Q407. why used: `Adam lr=0.001`?
-
-In ANN, `Adam lr=0.001` means adaptive optimizer. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:39`
-
-### Q408. algorithm formula: `Adam lr=0.001`?
-
-In ANN, `Adam lr=0.001` means adaptive optimizer. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:39`
-
-### Q409. chosen value reasoning: `Adam lr=0.001`?
-
-In ANN, `Adam lr=0.001` means adaptive optimizer. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:39`
-
-### Q410. overfitting impact: `Adam lr=0.001`?
-
-In ANN, `Adam lr=0.001` means adaptive optimizer. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:39`
-
-### Q411. what to tune: `Adam lr=0.001`?
-
-In ANN, `Adam lr=0.001` means adaptive optimizer. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:39`
-
-### Q412. viva defense: `Adam lr=0.001`?
-
-In ANN, `Adam lr=0.001` means adaptive optimizer. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:39`
-
-### Q413. why used: `binary_crossentropy`?
-
-In ANN, `binary_crossentropy` means binary loss. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
+It is the standard loss for binary labels with sigmoid probability output.
 
 **File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:40`
 
-### Q414. algorithm formula: `binary_crossentropy`?
+### Q70. Why use Dense(64) followed by Dense(32)?
 
-In ANN, `binary_crossentropy` means binary loss. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
+The network learns a wider nonlinear representation and then compresses it before binary output.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:40`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:31`
 
-### Q415. chosen value reasoning: `binary_crossentropy`?
+### Q71. Why use Dropout(0.2) then Dropout(0.1)?
 
-In ANN, `binary_crossentropy` means binary loss. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
+The wider first layer gets stronger regularization; the smaller second layer gets lighter dropout.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:40`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:32`
 
-### Q416. overfitting impact: `binary_crossentropy`?
+### Q72. Why use Adam with learning_rate=0.001?
 
-In ANN, `binary_crossentropy` means binary loss. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
+Adam is an adaptive optimizer and 0.001 is a stable default starting point.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:40`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:39`
 
-### Q417. what to tune: `binary_crossentropy`?
+### Q73. Why use EarlyStopping?
 
-In ANN, `binary_crossentropy` means binary loss. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:40`
-
-### Q418. viva defense: `binary_crossentropy`?
-
-In ANN, `binary_crossentropy` means binary loss. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:40`
-
-### Q419. why used: `accuracy metric`?
-
-In ANN, `accuracy metric` means training monitor. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:41`
-
-### Q420. algorithm formula: `accuracy metric`?
-
-In ANN, `accuracy metric` means training monitor. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:41`
-
-### Q421. chosen value reasoning: `accuracy metric`?
-
-In ANN, `accuracy metric` means training monitor. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:41`
-
-### Q422. overfitting impact: `accuracy metric`?
-
-In ANN, `accuracy metric` means training monitor. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:41`
-
-### Q423. what to tune: `accuracy metric`?
-
-In ANN, `accuracy metric` means training monitor. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:41`
-
-### Q424. viva defense: `accuracy metric`?
-
-In ANN, `accuracy metric` means training monitor. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:41`
-
-### Q425. why used: `epochs=50`?
-
-In ANN, `epochs=50` means max epochs. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:113`; `app/backend/src/app/ml/predictive_maintenance/train.py:133`
-
-### Q426. algorithm formula: `epochs=50`?
-
-In ANN, `epochs=50` means max epochs. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:113`; `app/backend/src/app/ml/predictive_maintenance/train.py:133`
-
-### Q427. chosen value reasoning: `epochs=50`?
-
-In ANN, `epochs=50` means max epochs. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:113`; `app/backend/src/app/ml/predictive_maintenance/train.py:133`
-
-### Q428. overfitting impact: `epochs=50`?
-
-In ANN, `epochs=50` means max epochs. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:113`; `app/backend/src/app/ml/predictive_maintenance/train.py:133`
-
-### Q429. what to tune: `epochs=50`?
-
-In ANN, `epochs=50` means max epochs. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:113`; `app/backend/src/app/ml/predictive_maintenance/train.py:133`
-
-### Q430. viva defense: `epochs=50`?
-
-In ANN, `epochs=50` means max epochs. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:113`; `app/backend/src/app/ml/predictive_maintenance/train.py:133`
-
-### Q431. why used: `batch_size=32`?
-
-In ANN, `batch_size=32` means samples per update. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:114`; `app/backend/src/app/ml/predictive_maintenance/train.py:134`
-
-### Q432. algorithm formula: `batch_size=32`?
-
-In ANN, `batch_size=32` means samples per update. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:114`; `app/backend/src/app/ml/predictive_maintenance/train.py:134`
-
-### Q433. chosen value reasoning: `batch_size=32`?
-
-In ANN, `batch_size=32` means samples per update. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:114`; `app/backend/src/app/ml/predictive_maintenance/train.py:134`
-
-### Q434. overfitting impact: `batch_size=32`?
-
-In ANN, `batch_size=32` means samples per update. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:114`; `app/backend/src/app/ml/predictive_maintenance/train.py:134`
-
-### Q435. what to tune: `batch_size=32`?
-
-In ANN, `batch_size=32` means samples per update. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:114`; `app/backend/src/app/ml/predictive_maintenance/train.py:134`
-
-### Q436. viva defense: `batch_size=32`?
-
-In ANN, `batch_size=32` means samples per update. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:114`; `app/backend/src/app/ml/predictive_maintenance/train.py:134`
-
-### Q437. why used: `verbose=0`?
-
-In ANN, `verbose=0` means quiet automation. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:137`
-
-### Q438. algorithm formula: `verbose=0`?
-
-In ANN, `verbose=0` means quiet automation. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:137`
-
-### Q439. chosen value reasoning: `verbose=0`?
-
-In ANN, `verbose=0` means quiet automation. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:137`
-
-### Q440. overfitting impact: `verbose=0`?
-
-In ANN, `verbose=0` means quiet automation. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:137`
-
-### Q441. what to tune: `verbose=0`?
-
-In ANN, `verbose=0` means quiet automation. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:137`
-
-### Q442. viva defense: `verbose=0`?
-
-In ANN, `verbose=0` means quiet automation. The choice is a conservative tabular-ML default for this predictive maintenance dataset. It connects to the model principle: probability estimation for Logistic Regression/ANN, ensemble voting for Random Forest, and sequential loss minimization for XGBoost.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:137`
-
-## ANN Training
-
-### Q443. purpose: `EarlyStopping`?
-
-`EarlyStopping` stops when validation stops improving. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:13`; `app/backend/src/app/ml/predictive_maintenance/train.py:127`
-
-### Q444. overfitting control: `EarlyStopping`?
-
-`EarlyStopping` stops when validation stops improving. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:13`; `app/backend/src/app/ml/predictive_maintenance/train.py:127`
-
-### Q445. why value: `EarlyStopping`?
-
-`EarlyStopping` stops when validation stops improving. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:13`; `app/backend/src/app/ml/predictive_maintenance/train.py:127`
-
-### Q446. what if removed: `EarlyStopping`?
-
-`EarlyStopping` stops when validation stops improving. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:13`; `app/backend/src/app/ml/predictive_maintenance/train.py:127`
-
-### Q447. defense answer: `EarlyStopping`?
-
-`EarlyStopping` stops when validation stops improving. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:13`; `app/backend/src/app/ml/predictive_maintenance/train.py:127`
-
-### Q448. purpose: `monitor=val_loss`?
-
-`monitor=val_loss` tracks generalization loss. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
+It stops training when validation loss stops improving and restores the best weights.
 
 **File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:127`
 
-### Q449. overfitting control: `monitor=val_loss`?
+### Q74. Why patience=5 for the PM ANN?
 
-`monitor=val_loss` tracks generalization loss. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:127`
-
-### Q450. why value: `monitor=val_loss`?
-
-`monitor=val_loss` tracks generalization loss. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
+It gives a small binary ANN several chances to improve without training indefinitely.
 
 **File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:127`
 
-### Q451. what if removed: `monitor=val_loss`?
+### Q75. Why branch on predict_proba in evaluation?
 
-`monitor=val_loss` tracks generalization loss. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
+Sklearn classifiers expose predict_proba, while Keras models return probabilities through predict.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:127`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:39`
 
-### Q452. defense answer: `monitor=val_loss`?
+### Q76. Why threshold probabilities at 0.5?
 
-`monitor=val_loss` tracks generalization loss. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:127`
-
-### Q453. purpose: `patience=5`?
-
-`patience=5` waits 5 epochs. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:127`
-
-### Q454. overfitting control: `patience=5`?
-
-`patience=5` waits 5 epochs. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:127`
-
-### Q455. why value: `patience=5`?
-
-`patience=5` waits 5 epochs. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:127`
-
-### Q456. what if removed: `patience=5`?
-
-`patience=5` waits 5 epochs. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:127`
-
-### Q457. defense answer: `patience=5`?
-
-`patience=5` waits 5 epochs. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:127`
-
-### Q458. purpose: `restore_best_weights=True`?
-
-`restore_best_weights=True` keeps best epoch. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:127`
-
-### Q459. overfitting control: `restore_best_weights=True`?
-
-`restore_best_weights=True` keeps best epoch. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:127`
-
-### Q460. why value: `restore_best_weights=True`?
-
-`restore_best_weights=True` keeps best epoch. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:127`
-
-### Q461. what if removed: `restore_best_weights=True`?
-
-`restore_best_weights=True` keeps best epoch. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:127`
-
-### Q462. defense answer: `restore_best_weights=True`?
-
-`restore_best_weights=True` keeps best epoch. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:127`
-
-### Q463. purpose: `validation_data`?
-
-`validation_data` unseen training split for ANN. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:131`
-
-### Q464. overfitting control: `validation_data`?
-
-`validation_data` unseen training split for ANN. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:131`
-
-### Q465. why value: `validation_data`?
-
-`validation_data` unseen training split for ANN. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:131`
-
-### Q466. what if removed: `validation_data`?
-
-`validation_data` unseen training split for ANN. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:131`
-
-### Q467. defense answer: `validation_data`?
-
-`validation_data` unseen training split for ANN. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:131`
-
-### Q468. purpose: `callbacks=[callback]`?
-
-`callbacks=[callback]` injects stopping logic. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:136`
-
-### Q469. overfitting control: `callbacks=[callback]`?
-
-`callbacks=[callback]` injects stopping logic. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:136`
-
-### Q470. why value: `callbacks=[callback]`?
-
-`callbacks=[callback]` injects stopping logic. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:136`
-
-### Q471. what if removed: `callbacks=[callback]`?
-
-`callbacks=[callback]` injects stopping logic. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:136`
-
-### Q472. defense answer: `callbacks=[callback]`?
-
-`callbacks=[callback]` injects stopping logic. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:136`
-
-### Q473. purpose: `history.epoch`?
-
-`history.epoch` actual epochs trained. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:139`
-
-### Q474. overfitting control: `history.epoch`?
-
-`history.epoch` actual epochs trained. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:139`
-
-### Q475. why value: `history.epoch`?
-
-`history.epoch` actual epochs trained. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:139`
-
-### Q476. what if removed: `history.epoch`?
-
-`history.epoch` actual epochs trained. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:139`
-
-### Q477. defense answer: `history.epoch`?
-
-`history.epoch` actual epochs trained. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:139`
-
-### Q478. purpose: `model.fit`?
-
-`model.fit` gradient training loop. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:128`
-
-### Q479. overfitting control: `model.fit`?
-
-`model.fit` gradient training loop. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:128`
-
-### Q480. why value: `model.fit`?
-
-`model.fit` gradient training loop. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:128`
-
-### Q481. what if removed: `model.fit`?
-
-`model.fit` gradient training loop. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:128`
-
-### Q482. defense answer: `model.fit`?
-
-`model.fit` gradient training loop. It helps the neural network stop at a model that generalizes, not merely one that keeps improving on training samples.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:128`
-
-## Evaluation Metrics
-
-### Q483. definition: `accuracy`?
-
-`accuracy` measures overall correctness. Formula/concept: `(TP+TN)/N`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:25`
-
-### Q484. formula: `accuracy`?
-
-`accuracy` measures overall correctness. Formula/concept: `(TP+TN)/N`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:25`
-
-### Q485. business reason: `accuracy`?
-
-`accuracy` measures overall correctness. Formula/concept: `(TP+TN)/N`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:25`
-
-### Q486. limitation: `accuracy`?
-
-`accuracy` measures overall correctness. Formula/concept: `(TP+TN)/N`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:25`
-
-### Q487. why logged: `accuracy`?
-
-`accuracy` measures overall correctness. Formula/concept: `(TP+TN)/N`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:25`
-
-### Q488. defense answer: `accuracy`?
-
-`accuracy` measures overall correctness. Formula/concept: `(TP+TN)/N`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:25`
-
-### Q489. definition: `precision`?
-
-`precision` measures false alarm control. Formula/concept: `TP/(TP+FP)`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
-
-### Q490. formula: `precision`?
-
-`precision` measures false alarm control. Formula/concept: `TP/(TP+FP)`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
-
-### Q491. business reason: `precision`?
-
-`precision` measures false alarm control. Formula/concept: `TP/(TP+FP)`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
-
-### Q492. limitation: `precision`?
-
-`precision` measures false alarm control. Formula/concept: `TP/(TP+FP)`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
-
-### Q493. why logged: `precision`?
-
-`precision` measures false alarm control. Formula/concept: `TP/(TP+FP)`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
-
-### Q494. defense answer: `precision`?
-
-`precision` measures false alarm control. Formula/concept: `TP/(TP+FP)`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
-
-### Q495. definition: `recall`?
-
-`recall` measures missed failure control. Formula/concept: `TP/(TP+FN)`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:27`
-
-### Q496. formula: `recall`?
-
-`recall` measures missed failure control. Formula/concept: `TP/(TP+FN)`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:27`
-
-### Q497. business reason: `recall`?
-
-`recall` measures missed failure control. Formula/concept: `TP/(TP+FN)`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:27`
-
-### Q498. limitation: `recall`?
-
-`recall` measures missed failure control. Formula/concept: `TP/(TP+FN)`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:27`
-
-### Q499. why logged: `recall`?
-
-`recall` measures missed failure control. Formula/concept: `TP/(TP+FN)`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:27`
-
-### Q500. defense answer: `recall`?
-
-`recall` measures missed failure control. Formula/concept: `TP/(TP+FN)`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:27`
-
-### Q501. definition: `f1_score`?
-
-`f1_score` measures balance precision/recall. Formula/concept: `2PR/(P+R)`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:28`
-
-### Q502. formula: `f1_score`?
-
-`f1_score` measures balance precision/recall. Formula/concept: `2PR/(P+R)`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:28`
-
-### Q503. business reason: `f1_score`?
-
-`f1_score` measures balance precision/recall. Formula/concept: `2PR/(P+R)`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:28`
-
-### Q504. limitation: `f1_score`?
-
-`f1_score` measures balance precision/recall. Formula/concept: `2PR/(P+R)`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:28`
-
-### Q505. why logged: `f1_score`?
-
-`f1_score` measures balance precision/recall. Formula/concept: `2PR/(P+R)`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:28`
-
-### Q506. defense answer: `f1_score`?
-
-`f1_score` measures balance precision/recall. Formula/concept: `2PR/(P+R)`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:28`
-
-### Q507. definition: `roc_auc`?
-
-`roc_auc` measures ranking across thresholds. Formula/concept: `area under ROC`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:29`
-
-### Q508. formula: `roc_auc`?
-
-`roc_auc` measures ranking across thresholds. Formula/concept: `area under ROC`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:29`
-
-### Q509. business reason: `roc_auc`?
-
-`roc_auc` measures ranking across thresholds. Formula/concept: `area under ROC`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:29`
-
-### Q510. limitation: `roc_auc`?
-
-`roc_auc` measures ranking across thresholds. Formula/concept: `area under ROC`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:29`
-
-### Q511. why logged: `roc_auc`?
-
-`roc_auc` measures ranking across thresholds. Formula/concept: `area under ROC`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:29`
-
-### Q512. defense answer: `roc_auc`?
-
-`roc_auc` measures ranking across thresholds. Formula/concept: `area under ROC`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:29`
-
-### Q513. definition: `zero_division=0`?
-
-`zero_division=0` measures prevents crashes. Formula/concept: `safe undefined metric handling`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
-
-### Q514. formula: `zero_division=0`?
-
-`zero_division=0` measures prevents crashes. Formula/concept: `safe undefined metric handling`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
-
-### Q515. business reason: `zero_division=0`?
-
-`zero_division=0` measures prevents crashes. Formula/concept: `safe undefined metric handling`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
-
-### Q516. limitation: `zero_division=0`?
-
-`zero_division=0` measures prevents crashes. Formula/concept: `safe undefined metric handling`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
-
-### Q517. why logged: `zero_division=0`?
-
-`zero_division=0` measures prevents crashes. Formula/concept: `safe undefined metric handling`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
-
-### Q518. defense answer: `zero_division=0`?
-
-`zero_division=0` measures prevents crashes. Formula/concept: `safe undefined metric handling`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
-
-### Q519. definition: `threshold 0.5`?
-
-`threshold 0.5` measures class conversion. Formula/concept: `default probability cutoff`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:41`; `app/backend/src/app/ml/predictive_maintenance/evaluate.py:44`
-
-### Q520. formula: `threshold 0.5`?
-
-`threshold 0.5` measures class conversion. Formula/concept: `default probability cutoff`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:41`; `app/backend/src/app/ml/predictive_maintenance/evaluate.py:44`
-
-### Q521. business reason: `threshold 0.5`?
-
-`threshold 0.5` measures class conversion. Formula/concept: `default probability cutoff`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:41`; `app/backend/src/app/ml/predictive_maintenance/evaluate.py:44`
-
-### Q522. limitation: `threshold 0.5`?
-
-`threshold 0.5` measures class conversion. Formula/concept: `default probability cutoff`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:41`; `app/backend/src/app/ml/predictive_maintenance/evaluate.py:44`
-
-### Q523. why logged: `threshold 0.5`?
-
-`threshold 0.5` measures class conversion. Formula/concept: `default probability cutoff`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:41`; `app/backend/src/app/ml/predictive_maintenance/evaluate.py:44`
-
-### Q524. defense answer: `threshold 0.5`?
-
-`threshold 0.5` measures class conversion. Formula/concept: `default probability cutoff`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:41`; `app/backend/src/app/ml/predictive_maintenance/evaluate.py:44`
-
-### Q525. definition: `sort by f1_score`?
-
-`sort by f1_score` measures imbalance-aware selection. Formula/concept: `best-model rule`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:75`
-
-### Q526. formula: `sort by f1_score`?
-
-`sort by f1_score` measures imbalance-aware selection. Formula/concept: `best-model rule`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:75`
-
-### Q527. business reason: `sort by f1_score`?
-
-`sort by f1_score` measures imbalance-aware selection. Formula/concept: `best-model rule`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:75`
-
-### Q528. limitation: `sort by f1_score`?
-
-`sort by f1_score` measures imbalance-aware selection. Formula/concept: `best-model rule`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:75`
-
-### Q529. why logged: `sort by f1_score`?
-
-`sort by f1_score` measures imbalance-aware selection. Formula/concept: `best-model rule`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:75`
-
-### Q530. defense answer: `sort by f1_score`?
-
-`sort by f1_score` measures imbalance-aware selection. Formula/concept: `best-model rule`. It is reported because predictive maintenance has asymmetric costs: missed failures and false alarms both matter.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:75`
-
-## MLflow and Persistence
-
-### Q531. why used: `compare_models`?
-
-`compare_models` provides same test-set comparison. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:48`; `app/backend/src/app/ml/predictive_maintenance/pipeline.py:69`
-
-### Q532. MLOps value: `compare_models`?
-
-`compare_models` provides same test-set comparison. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:48`; `app/backend/src/app/ml/predictive_maintenance/pipeline.py:69`
-
-### Q533. demo explanation: `compare_models`?
-
-`compare_models` provides same test-set comparison. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:48`; `app/backend/src/app/ml/predictive_maintenance/pipeline.py:69`
-
-### Q534. risk if missing: `compare_models`?
-
-`compare_models` provides same test-set comparison. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:48`; `app/backend/src/app/ml/predictive_maintenance/pipeline.py:69`
-
-### Q535. why used: `best_row=iloc[0]`?
-
-`best_row=iloc[0]` provides top F1 model. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:74`
-
-### Q536. MLOps value: `best_row=iloc[0]`?
-
-`best_row=iloc[0]` provides top F1 model. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:74`
-
-### Q537. demo explanation: `best_row=iloc[0]`?
-
-`best_row=iloc[0]` provides top F1 model. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:74`
-
-### Q538. risk if missing: `best_row=iloc[0]`?
-
-`best_row=iloc[0]` provides top F1 model. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:74`
-
-### Q539. why used: `mlflow.set_tracking_uri`?
-
-`mlflow.set_tracking_uri` provides tracking location. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:17`
-
-### Q540. MLOps value: `mlflow.set_tracking_uri`?
-
-`mlflow.set_tracking_uri` provides tracking location. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:17`
-
-### Q541. demo explanation: `mlflow.set_tracking_uri`?
-
-`mlflow.set_tracking_uri` provides tracking location. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:17`
-
-### Q542. risk if missing: `mlflow.set_tracking_uri`?
-
-`mlflow.set_tracking_uri` provides tracking location. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:17`
-
-### Q543. why used: `mlflow.set_experiment`?
-
-`mlflow.set_experiment` provides experiment grouping. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:18`
-
-### Q544. MLOps value: `mlflow.set_experiment`?
-
-`mlflow.set_experiment` provides experiment grouping. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:18`
-
-### Q545. demo explanation: `mlflow.set_experiment`?
-
-`mlflow.set_experiment` provides experiment grouping. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:18`
-
-### Q546. risk if missing: `mlflow.set_experiment`?
-
-`mlflow.set_experiment` provides experiment grouping. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:18`
-
-### Q547. why used: `mlflow.start_run`?
-
-`mlflow.start_run` provides run boundary. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:30`
-
-### Q548. MLOps value: `mlflow.start_run`?
-
-`mlflow.start_run` provides run boundary. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:30`
-
-### Q549. demo explanation: `mlflow.start_run`?
-
-`mlflow.start_run` provides run boundary. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:30`
-
-### Q550. risk if missing: `mlflow.start_run`?
-
-`mlflow.start_run` provides run boundary. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:30`
-
-### Q551. why used: `mlflow.log_params`?
-
-`mlflow.log_params` provides configuration record. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:31`
-
-### Q552. MLOps value: `mlflow.log_params`?
-
-`mlflow.log_params` provides configuration record. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:31`
-
-### Q553. demo explanation: `mlflow.log_params`?
-
-`mlflow.log_params` provides configuration record. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:31`
-
-### Q554. risk if missing: `mlflow.log_params`?
-
-`mlflow.log_params` provides configuration record. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:31`
-
-### Q555. why used: `mlflow.log_metrics`?
-
-`mlflow.log_metrics` provides metric record. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:32`
-
-### Q556. MLOps value: `mlflow.log_metrics`?
-
-`mlflow.log_metrics` provides metric record. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:32`
-
-### Q557. demo explanation: `mlflow.log_metrics`?
-
-`mlflow.log_metrics` provides metric record. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:32`
-
-### Q558. risk if missing: `mlflow.log_metrics`?
-
-`mlflow.log_metrics` provides metric record. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:32`
-
-### Q559. why used: `mlflow.keras.log_model`?
-
-`mlflow.keras.log_model` provides ANN artifact. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:34`
-
-### Q560. MLOps value: `mlflow.keras.log_model`?
-
-`mlflow.keras.log_model` provides ANN artifact. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:34`
-
-### Q561. demo explanation: `mlflow.keras.log_model`?
-
-`mlflow.keras.log_model` provides ANN artifact. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:34`
-
-### Q562. risk if missing: `mlflow.keras.log_model`?
-
-`mlflow.keras.log_model` provides ANN artifact. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:34`
-
-### Q563. why used: `mlflow.sklearn.log_model`?
-
-`mlflow.sklearn.log_model` provides sklearn artifact. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:36`
-
-### Q564. MLOps value: `mlflow.sklearn.log_model`?
-
-`mlflow.sklearn.log_model` provides sklearn artifact. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:36`
-
-### Q565. demo explanation: `mlflow.sklearn.log_model`?
-
-`mlflow.sklearn.log_model` provides sklearn artifact. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:36`
-
-### Q566. risk if missing: `mlflow.sklearn.log_model`?
-
-`mlflow.sklearn.log_model` provides sklearn artifact. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:36`
-
-### Q567. why used: `persist_best_model`?
-
-`persist_best_model` provides deployable local copy. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:40`
-
-### Q568. MLOps value: `persist_best_model`?
-
-`persist_best_model` provides deployable local copy. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:40`
-
-### Q569. demo explanation: `persist_best_model`?
-
-`persist_best_model` provides deployable local copy. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:40`
-
-### Q570. risk if missing: `persist_best_model`?
-
-`persist_best_model` provides deployable local copy. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:40`
-
-### Q571. why used: `artifact_path`?
-
-`artifact_path` provides artifact name. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:27`
-
-### Q572. MLOps value: `artifact_path`?
-
-`artifact_path` provides artifact name. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:27`
-
-### Q573. demo explanation: `artifact_path`?
-
-`artifact_path` provides artifact name. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:27`
-
-### Q574. risk if missing: `artifact_path`?
-
-`artifact_path` provides artifact name. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:27`
-
-### Q575. why used: `model_registry_path`?
-
-`model_registry_path` provides registry root. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/core/config.py:14`; `app/backend/src/app/ml/predictive_maintenance/model_store.py:19`
-
-### Q576. MLOps value: `model_registry_path`?
-
-`model_registry_path` provides registry root. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/core/config.py:14`; `app/backend/src/app/ml/predictive_maintenance/model_store.py:19`
-
-### Q577. demo explanation: `model_registry_path`?
-
-`model_registry_path` provides registry root. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/core/config.py:14`; `app/backend/src/app/ml/predictive_maintenance/model_store.py:19`
-
-### Q578. risk if missing: `model_registry_path`?
-
-`model_registry_path` provides registry root. It makes the capstone reproducible because the selected model, parameters, metrics, and artifact location can be audited after training.
-
-**File reference:** `app/backend/src/app/core/config.py:14`; `app/backend/src/app/ml/predictive_maintenance/model_store.py:19`
-
-## Configuration
-
-### Q579. purpose: `FASTAPI_ENV`?
-
-`FASTAPI_ENV` controls runtime mode. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:7`; `app/backend/.env.example:1`
-
-### Q580. deployment value: `FASTAPI_ENV`?
-
-`FASTAPI_ENV` controls runtime mode. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:7`; `app/backend/.env.example:1`
-
-### Q581. misconfiguration risk: `FASTAPI_ENV`?
-
-`FASTAPI_ENV` controls runtime mode. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:7`; `app/backend/.env.example:1`
-
-### Q582. purpose: `FASTAPI_HOST=0.0.0.0`?
-
-`FASTAPI_HOST=0.0.0.0` controls container-friendly bind. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:8`; `app/backend/.env.example:2`
-
-### Q583. deployment value: `FASTAPI_HOST=0.0.0.0`?
-
-`FASTAPI_HOST=0.0.0.0` controls container-friendly bind. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:8`; `app/backend/.env.example:2`
-
-### Q584. misconfiguration risk: `FASTAPI_HOST=0.0.0.0`?
-
-`FASTAPI_HOST=0.0.0.0` controls container-friendly bind. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:8`; `app/backend/.env.example:2`
-
-### Q585. purpose: `FASTAPI_PORT=8000`?
-
-`FASTAPI_PORT=8000` controls API port. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:9`; `app/backend/.env.example:3`
-
-### Q586. deployment value: `FASTAPI_PORT=8000`?
-
-`FASTAPI_PORT=8000` controls API port. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:9`; `app/backend/.env.example:3`
-
-### Q587. misconfiguration risk: `FASTAPI_PORT=8000`?
-
-`FASTAPI_PORT=8000` controls API port. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:9`; `app/backend/.env.example:3`
-
-### Q588. purpose: `DATABASE_URL`?
-
-`DATABASE_URL` controls PostgreSQL connection. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:10`; `app/backend/.env.example:4`
-
-### Q589. deployment value: `DATABASE_URL`?
-
-`DATABASE_URL` controls PostgreSQL connection. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:10`; `app/backend/.env.example:4`
-
-### Q590. misconfiguration risk: `DATABASE_URL`?
-
-`DATABASE_URL` controls PostgreSQL connection. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:10`; `app/backend/.env.example:4`
-
-### Q591. purpose: `LOG_LEVEL=INFO`?
-
-`LOG_LEVEL=INFO` controls useful logs. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:11`; `app/backend/.env.example:5`
-
-### Q592. deployment value: `LOG_LEVEL=INFO`?
-
-`LOG_LEVEL=INFO` controls useful logs. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:11`; `app/backend/.env.example:5`
-
-### Q593. misconfiguration risk: `LOG_LEVEL=INFO`?
-
-`LOG_LEVEL=INFO` controls useful logs. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:11`; `app/backend/.env.example:5`
-
-### Q594. purpose: `MLFLOW_TRACKING_URI`?
-
-`MLFLOW_TRACKING_URI` controls experiment location. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:12`; `app/backend/.env.example:6`
-
-### Q595. deployment value: `MLFLOW_TRACKING_URI`?
-
-`MLFLOW_TRACKING_URI` controls experiment location. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:12`; `app/backend/.env.example:6`
-
-### Q596. misconfiguration risk: `MLFLOW_TRACKING_URI`?
-
-`MLFLOW_TRACKING_URI` controls experiment location. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:12`; `app/backend/.env.example:6`
-
-### Q597. purpose: `MLFLOW_EXPERIMENT_NAME`?
-
-`MLFLOW_EXPERIMENT_NAME` controls run grouping. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:13`; `app/backend/.env.example:7`
-
-### Q598. deployment value: `MLFLOW_EXPERIMENT_NAME`?
-
-`MLFLOW_EXPERIMENT_NAME` controls run grouping. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:13`; `app/backend/.env.example:7`
-
-### Q599. misconfiguration risk: `MLFLOW_EXPERIMENT_NAME`?
-
-`MLFLOW_EXPERIMENT_NAME` controls run grouping. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:13`; `app/backend/.env.example:7`
-
-### Q600. purpose: `MLFLOW_ARTIFACT_ROOT`?
-
-`MLFLOW_ARTIFACT_ROOT` controls artifact root. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:14`; `app/backend/.env.example:8`
-
-### Q601. deployment value: `MLFLOW_ARTIFACT_ROOT`?
-
-`MLFLOW_ARTIFACT_ROOT` controls artifact root. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:14`; `app/backend/.env.example:8`
-
-### Q602. misconfiguration risk: `MLFLOW_ARTIFACT_ROOT`?
-
-`MLFLOW_ARTIFACT_ROOT` controls artifact root. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:14`; `app/backend/.env.example:8`
-
-### Q603. purpose: `BaseSettings`?
-
-`BaseSettings` controls env loading. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:3`; `app/backend/src/app/core/config.py:6`
-
-### Q604. deployment value: `BaseSettings`?
-
-`BaseSettings` controls env loading. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:3`; `app/backend/src/app/core/config.py:6`
-
-### Q605. misconfiguration risk: `BaseSettings`?
-
-`BaseSettings` controls env loading. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:3`; `app/backend/src/app/core/config.py:6`
-
-### Q606. purpose: `AnyUrl`?
-
-`AnyUrl` controls URL validation. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:3`; `app/backend/src/app/core/config.py:10`
-
-### Q607. deployment value: `AnyUrl`?
-
-`AnyUrl` controls URL validation. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:3`; `app/backend/src/app/core/config.py:10`
-
-### Q608. misconfiguration risk: `AnyUrl`?
-
-`AnyUrl` controls URL validation. Configuration is separated from code so the same application can run locally, in Docker, or in production with different environment values.
-
-**File reference:** `app/backend/src/app/core/config.py:3`; `app/backend/src/app/core/config.py:10`
-
-## API and Serving
-
-### Q609. why present: `MaintenanceRequest`?
-
-`MaintenanceRequest` represents device and sensors. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/schemas.py:12`; `app/backend/services.py:20`; `app/backend/api.py:45`
-
-### Q610. real-app connection: `MaintenanceRequest`?
-
-`MaintenanceRequest` represents device and sensors. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/schemas.py:12`; `app/backend/services.py:20`; `app/backend/api.py:45`
-
-### Q611. future improvement: `MaintenanceRequest`?
-
-`MaintenanceRequest` represents device and sensors. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/schemas.py:12`; `app/backend/services.py:20`; `app/backend/api.py:45`
-
-### Q612. why present: `MaintenanceSensor`?
-
-`MaintenanceSensor` represents timestamped readings. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/schemas.py:7`
-
-### Q613. real-app connection: `MaintenanceSensor`?
-
-`MaintenanceSensor` represents timestamped readings. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/schemas.py:7`
-
-### Q614. future improvement: `MaintenanceSensor`?
-
-`MaintenanceSensor` represents timestamped readings. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/schemas.py:7`
-
-### Q615. why present: `failure_risk`?
-
-`failure_risk` represents bounded risk score. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/schemas.py:19`; `app/backend/services.py:36`
-
-### Q616. real-app connection: `failure_risk`?
-
-`failure_risk` represents bounded risk score. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/schemas.py:19`; `app/backend/services.py:36`
-
-### Q617. future improvement: `failure_risk`?
-
-`failure_risk` represents bounded risk score. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/schemas.py:19`; `app/backend/services.py:36`
-
-### Q618. why present: `eta_hours`?
-
-`eta_hours` represents maintenance urgency. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/schemas.py:20`; `app/backend/services.py:27`
-
-### Q619. real-app connection: `eta_hours`?
-
-`eta_hours` represents maintenance urgency. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/schemas.py:20`; `app/backend/services.py:27`
-
-### Q620. future improvement: `eta_hours`?
-
-`eta_hours` represents maintenance urgency. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/schemas.py:20`; `app/backend/services.py:27`
-
-### Q621. why present: `explanation`?
-
-`explanation` represents reason/source. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/schemas.py:21`; `app/backend/services.py:36`
-
-### Q622. real-app connection: `explanation`?
-
-`explanation` represents reason/source. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/schemas.py:21`; `app/backend/services.py:36`
-
-### Q623. future improvement: `explanation`?
-
-`explanation` represents reason/source. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/schemas.py:21`; `app/backend/services.py:36`
-
-### Q624. why present: `Field ge/le`?
-
-`Field ge/le` represents output bounds. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/schemas.py:19`
-
-### Q625. real-app connection: `Field ge/le`?
-
-`Field ge/le` represents output bounds. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/schemas.py:19`
-
-### Q626. future improvement: `Field ge/le`?
-
-`Field ge/le` represents output bounds. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/schemas.py:19`
-
-### Q627. why present: `ServiceError`?
-
-`ServiceError` represents controlled API failure. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/services.py:25`
-
-### Q628. real-app connection: `ServiceError`?
-
-`ServiceError` represents controlled API failure. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/services.py:25`
-
-### Q629. future improvement: `ServiceError`?
-
-`ServiceError` represents controlled API failure. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/services.py:25`
-
-### Q630. why present: `latency metric`?
-
-`latency metric` represents inference timing. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/services.py:33`
-
-### Q631. real-app connection: `latency metric`?
-
-`latency metric` represents inference timing. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/services.py:33`
-
-### Q632. future improvement: `latency metric`?
-
-`latency metric` represents inference timing. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/services.py:33`
-
-### Q633. why present: `prediction volume`?
-
-`prediction volume` represents usage monitoring. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/services.py:34`
-
-### Q634. real-app connection: `prediction volume`?
-
-`prediction volume` represents usage monitoring. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/services.py:34`
-
-### Q635. future improvement: `prediction volume`?
-
-`prediction volume` represents usage monitoring. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/services.py:34`
-
-### Q636. why present: `heuristic current service`?
-
-`heuristic current service` represents temporary fallback before real model loading. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/services.py:20`
-
-### Q637. real-app connection: `heuristic current service`?
-
-`heuristic current service` represents temporary fallback before real model loading. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/services.py:20`
-
-### Q638. future improvement: `heuristic current service`?
-
-`heuristic current service` represents temporary fallback before real model loading. It connects ML training to an application interface; a future improvement is loading the persisted MLflow model instead of relying on the current lightweight heuristic path.
-
-**File reference:** `app/backend/services.py:20`
-
-## Architecture
-
-### Q639. why included: `React frontend`?
-
-`React frontend` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:36`; `architecture.md:151`
-
-### Q640. capstone defense: `React frontend`?
-
-`React frontend` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:36`; `architecture.md:151`
-
-### Q641. production value: `React frontend`?
-
-`React frontend` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:36`; `architecture.md:151`
-
-### Q642. why included: `FastAPI backend`?
-
-`FastAPI backend` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:37`; `app/backend/src/app/main.py:8`
-
-### Q643. capstone defense: `FastAPI backend`?
-
-`FastAPI backend` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:37`; `app/backend/src/app/main.py:8`
-
-### Q644. production value: `FastAPI backend`?
-
-`FastAPI backend` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:37`; `app/backend/src/app/main.py:8`
-
-### Q645. why included: `PostgreSQL`?
-
-`PostgreSQL` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:39`; `app/backend/.env.example:4`
-
-### Q646. capstone defense: `PostgreSQL`?
-
-`PostgreSQL` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:39`; `app/backend/.env.example:4`
-
-### Q647. production value: `PostgreSQL`?
-
-`PostgreSQL` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:39`; `app/backend/.env.example:4`
-
-### Q648. why included: `MLflow`?
-
-`MLflow` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:40`; `app/backend/src/app/ml/predictive_maintenance/model_store.py:17`
-
-### Q649. capstone defense: `MLflow`?
-
-`MLflow` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:40`; `app/backend/src/app/ml/predictive_maintenance/model_store.py:17`
-
-### Q650. production value: `MLflow`?
-
-`MLflow` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:40`; `app/backend/src/app/ml/predictive_maintenance/model_store.py:17`
-
-### Q651. why included: `Docker Compose`?
-
-`Docker Compose` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:134`
-
-### Q652. capstone defense: `Docker Compose`?
-
-`Docker Compose` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:134`
-
-### Q653. production value: `Docker Compose`?
-
-`Docker Compose` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:134`
-
-### Q654. why included: `structured logs`?
-
-`structured logs` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:178`
-
-### Q655. capstone defense: `structured logs`?
-
-`structured logs` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:178`
-
-### Q656. production value: `structured logs`?
-
-`structured logs` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:178`
-
-### Q657. why included: `correlation IDs`?
-
-`correlation IDs` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:183`
-
-### Q658. capstone defense: `correlation IDs`?
-
-`correlation IDs` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:183`
-
-### Q659. production value: `correlation IDs`?
-
-`correlation IDs` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:183`
-
-### Q660. why included: `model registry`?
-
-`model registry` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:121`
-
-### Q661. capstone defense: `model registry`?
-
-`model registry` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:121`
-
-### Q662. production value: `model registry`?
-
-`model registry` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:121`
-
-### Q663. why included: `validation layer`?
-
-`validation layer` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:196`
-
-### Q664. capstone defense: `validation layer`?
-
-`validation layer` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:196`
-
-### Q665. production value: `validation layer`?
-
-`validation layer` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:196`
-
-### Q666. why included: `operator feedback loop`?
-
-`operator feedback loop` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:101`
-
-### Q667. capstone defense: `operator feedback loop`?
-
-`operator feedback loop` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:101`
-
-### Q668. production value: `operator feedback loop`?
-
-`operator feedback loop` is included to make the project a deployable AI operations platform rather than a notebook. It supports usability, persistence, governance, reproducibility, monitoring, or future scaling.
-
-**File reference:** `architecture.md:101`
-
-## Future Work
-
-### Q669. what is it: `SMOTE/class_weight`?
-
-`SMOTE/class_weight` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:50`; `app/backend/src/app/ml/predictive_maintenance/train.py:62`
-
-### Q670. why useful: `SMOTE/class_weight`?
-
-`SMOTE/class_weight` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:50`; `app/backend/src/app/ml/predictive_maintenance/train.py:62`
-
-### Q671. why not mandatory now: `SMOTE/class_weight`?
-
-`SMOTE/class_weight` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
-
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:50`; `app/backend/src/app/ml/predictive_maintenance/train.py:62`
-
-### Q672. what is it: `threshold tuning`?
-
-`threshold tuning` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+It is the default binary cutoff, though production should tune it using business costs.
 
 **File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:41`
 
-### Q673. why useful: `threshold tuning`?
+### Q77. Why sort models by F1?
 
-`threshold tuning` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+F1 balances precision and recall, which matters for imbalanced failure data.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:75`
+
+### Q78. Why include ROC-AUC?
+
+ROC-AUC evaluates ranking quality across thresholds, useful when the operating threshold may change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:29`
+
+### Q79. Why use zero_division=0?
+
+It avoids metric crashes when a model predicts no positive examples.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
+
+### Q80. Why log feature_engineer_params?
+
+Ratio features depend on fitted denominators, so these values are needed for reproducibility.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:84`
+
+### Q81. Why stratify the ANN validation split?
+
+The validation set should preserve class proportions so early stopping is not biased.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:156`
+
+### Q82. What is odd about _train_models_with_validation?
+
+It accepts X_test and y_test but does not use them, so the signature is misleading.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:119`
+
+### Q83. Why choose mlflow.keras for Keras models?
+
+Keras and sklearn artifacts need different MLflow serialization flavors.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:33`
+
+### Q84. Why persist the best model locally too?
+
+Local persistence provides a deployment artifact even without querying MLflow.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:40`
+
+### Q85. What is needed before real PM deployment?
+
+The API must load the persisted model and apply the same feature engineering used during training.
+
+**File reference:** `app/backend/services.py:20; app/backend/src/app/ml/predictive_maintenance/model_store.py:40`
+
+## Quality Inspection
+
+### Q86. What ML task does quality inspection solve?
+
+It performs multiclass classification of steel plate defect classes.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:37`
+
+### Q87. Why Dense(7, softmax)?
+
+There are seven fault classes, and softmax outputs a probability distribution across them.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:37`
+
+### Q88. Why sparse_categorical_crossentropy?
+
+The target labels are integer class IDs rather than one-hot vectors.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:41`
+
+### Q89. Why is the quality ANN deeper than PM ANN?
+
+Multiclass defect geometry can need more representational capacity than binary machine failure.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:31`
+
+### Q90. Why use dropout 0.3, 0.2, 0.1?
+
+Wider early layers get stronger regularization; smaller later layers get less.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:32`
+
+### Q91. Why include DecisionTreeClassifier?
+
+It gives an interpretable rule-based baseline for defect geometry.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:58`
+
+### Q92. Why decision tree max_depth=12?
+
+It limits overfitting while allowing moderately complex defect boundaries.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:64`
+
+### Q93. Why min_samples_split=5?
+
+It prevents splits based on very tiny sample groups.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:65`
+
+### Q94. Why min_samples_leaf=2?
+
+It prevents leaves containing only one sample, reducing memorization.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:66`
+
+### Q95. Why use RBF SVM?
+
+The RBF kernel models nonlinear boundaries in scaled geometric feature space.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:79`
+
+### Q96. Why SVC probability=True?
+
+The evaluation function expects probabilities; SVC needs probability=True for predict_proba.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:82`
+
+### Q97. Why gamma='scale'?
+
+It adapts kernel width based on feature count and variance, making it a safer default.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:81`
+
+### Q98. Why quality XGBoost num_class=7?
+
+The model is configured for seven multiclass defect labels.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:97`
+
+### Q99. Why eval_metric='mlogloss'?
+
+Multiclass log loss evaluates probability quality across all classes.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:98`
+
+### Q100. Why quality XGBoost max_depth=8?
+
+Defect classification may need more complex boundaries than the PM binary task.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:95`
+
+### Q101. What does x_range measure?
+
+It measures horizontal defect extent: X_Maximum minus X_Minimum.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/features.py:62`
+
+### Q102. What does y_range measure?
+
+It measures vertical defect extent: Y_Maximum minus Y_Minimum.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/features.py:63`
+
+### Q103. Why create area_ratio?
+
+It normalizes defect pixel area relative to the training-set mean.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/features.py:64`
+
+### Q104. Why create nuclei_density?
+
+It measures Bare_Nuclei per unit Pixel_area, a density-style defect feature.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/features.py:65`
+
+### Q105. Why replace zero Pixel_area with 1.0?
+
+It prevents division by zero when computing density.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/features.py:65`
+
+### Q106. Why create shape_ratio?
+
+It distinguishes elongated and compact defect shapes by comparing x_range and y_range.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/features.py:66`
+
+### Q107. Why store pixel_area_mean?
+
+It lets area_ratio use training-set statistics only, avoiding test leakage.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/features.py:45`
+
+### Q108. Why is pixel_area_std suspicious?
+
+It is stored during fit but not used in transform, so it may be leftover or planned future work.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/features.py:46`
+
+### Q109. Why split before quality feature engineering?
+
+It avoids leaking test geometry statistics into training transformations.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/pipeline.py:66`
+
+### Q110. What is weak about the quality ANN validation split?
+
+It slices the last 20 percent of the training data rather than doing a stratified split.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/pipeline.py:78`
+
+### Q111. Why compute macro metrics?
+
+Macro metrics weight each defect class equally and reveal minority-class performance.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/evaluate.py:30`
+
+### Q112. Why compute weighted metrics?
+
+Weighted metrics account for class frequency and summarize overall multiclass performance.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/evaluate.py:31`
+
+### Q113. Why sort by f1_weighted?
+
+It balances precision and recall while respecting class support.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/evaluate.py:86`
+
+### Q114. How does ANN prediction become a class?
+
+The code uses np.argmax over softmax probabilities to select the most likely class.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/evaluate.py:55`
+
+### Q115. What serious quality pipeline gap exists?
+
+It imports app.ml.quality_inspection.model_store, but that file is missing in the repo.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/pipeline.py:21`
+
+### Q116. What label validation should be added?
+
+The `class` label should be checked to fall within the expected seven class IDs.
+
+**File reference:** `app/backend/src/app/data/loaders.py:168`
+
+## Demand Forecasting
+
+### Q117. What ML task is demand forecasting?
+
+It is regression/time-series forecasting of numeric demand.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:20`
+
+### Q118. Why include Linear Regression?
+
+It is a simple baseline for engineered lag, rolling, and calendar features.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:20`
+
+### Q119. Why include RandomForestRegressor?
+
+It captures nonlinear interactions among lag, rolling, store/item, and calendar features.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:33`
+
+### Q120. Why Random Forest max_depth=20?
+
+Demand patterns can be complex, so the forest is allowed more depth than PM while still capped.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:39`
+
+### Q121. Why min_samples_split=5 and min_samples_leaf=2?
+
+They reduce overfitting by preventing tiny branches and single-record leaves.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:40`
+
+### Q122. Why include XGBRegressor?
+
+Boosted trees are strong for tabular forecasting features.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:53`
+
+### Q123. Why objective='reg:squarederror'?
+
+The target is continuous demand, so squared-error regression is appropriate.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:62`
+
+### Q124. Why subsample=0.8 and colsample_bytree=0.8?
+
+They add row and feature sampling to reduce overfitting in boosting.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:60`
+
+### Q125. Why include LSTM?
+
+LSTM can learn temporal dependencies over ordered sequences.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:69`
+
+### Q126. Why reshape LSTM input to samples x lookback x 1?
+
+Keras LSTM expects 3D sequence input: samples, timesteps, features.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:112`
+
+### Q127. Why first LSTM return_sequences=True?
+
+The second LSTM layer needs a sequence from the first layer.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:78`
+
+### Q128. Why second LSTM return_sequences=False?
+
+It outputs one final representation before Dense regression layers.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:80`
+
+### Q129. Why Dense(1) without activation?
+
+Demand is a continuous numeric target, not a probability.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:84`
+
+### Q130. Why train LSTM with MSE and MAE?
+
+MSE penalizes large errors; MAE gives an interpretable average absolute error.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:89`
+
+### Q131. Why lag windows 7, 14, and 30?
+
+They represent weekly, two-week, and monthly historical demand patterns.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/features.py:10`
+
+### Q132. Why rolling windows 7, 14, and 30?
+
+They summarize recent trend and volatility at useful retail horizons.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/features.py:11`
+
+### Q133. Why use series.shift(lag)?
+
+It creates past-demand features without using future demand.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/features.py:43`
+
+### Q134. Why rolling std fillna(0)?
+
+The first rolling observations may lack enough values, so zero indicates no observed variation yet.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/features.py:57`
+
+### Q135. Why create day_of_week?
+
+It captures weekly seasonality in demand.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/features.py:71`
+
+### Q136. Why create is_weekend?
+
+Weekend demand can differ from weekday demand.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/features.py:75`
+
+### Q137. Why fit demand_mean and demand_std?
+
+They are logged training statistics, though not currently used in transform.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/features.py:30`
+
+### Q138. What is a limitation of transforming val/test separately?
+
+Early validation/test rows lose historical context from previous splits, which can weaken or misalign lag features.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/pipeline.py:98`
+
+### Q139. Why lookback=30?
+
+The LSTM uses about one month of history for each sequence.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/pipeline.py:34`
+
+### Q140. Why lookahead=1?
+
+The sequence generator predicts the next time step.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/features.py:128`
+
+### Q141. What target index does create_sequences use?
+
+It uses i + lookback + lookahead - 1, which is the next target when lookahead is 1.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/features.py:151`
+
+### Q142. Why drop duplicates by date, store, item?
+
+There should be one demand record per store-item-date key.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/preprocessing.py:25`
+
+### Q143. Why warn rather than fail on negative demand?
+
+The code treats negative demand as suspicious but not fatal; production should likely reject or correct it.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/preprocessing.py:48`
+
+### Q144. Why preserve time order in split_time_series?
+
+Random splits would leak future patterns into training.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/preprocessing.py:57`
+
+### Q145. Why require split sizes to sum to 1?
+
+The entire time series should be partitioned cleanly into train, validation, and test.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/preprocessing.py:80`
+
+### Q146. Why aggregate by date, store, and item?
+
+It establishes consistent forecasting granularity.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/preprocessing.py:100`
+
+### Q147. Why allow optional store_id and item_id filters?
+
+They support focused experiments for a single store or item.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/pipeline.py:76`
+
+### Q148. What scaling inconsistency exists in demand pipeline?
+
+External scaled arrays are used for LSTM, while sklearn pipelines train on unscaled X_train because they already contain StandardScaler.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/pipeline.py:119`
+
+### Q149. What bug exists in demand predict_model?
+
+hasattr(model, 'predict') is true for both sklearn and Keras, so the intended Keras else branch is unreachable.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/evaluate.py:43`
+
+### Q150. Why trim y_true and y_pred to the same length?
+
+LSTM sequence predictions can be shorter than raw targets, but trimming can hide alignment mistakes.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/evaluate.py:24`
+
+### Q151. Why add 1e-6 in MAPE?
+
+It prevents division by zero when true demand is zero.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/evaluate.py:30`
+
+### Q152. Why sort demand models by R2?
+
+R2 ranks explained variance, but it should be reviewed with RMSE and MAE.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/pipeline.py:162`
+
+### Q153. What is risky about Keras model detection in ModelStore?
+
+Keras models usually have both predict and fit, so the current check can misclassify them as sklearn objects.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/model_store.py:77`
+
+### Q154. Why save sklearn models with joblib?
+
+Joblib serializes sklearn pipelines efficiently for local artifact storage.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/model_store.py:86`
+
+### Q155. What demand schema mismatch must be fixed?
+
+Shared validation expects `sales`, while this pipeline expects `demand`.
+
+**File reference:** `app/backend/src/app/data/loaders.py:198; app/backend/src/app/ml/demand_forecasting/preprocessing.py:38`
+
+## Inventory Optimization
+
+### Q156. What does inventory optimization predict?
+
+The standalone module trains regressors to predict demand from inventory/time-series features.
+
+**File reference:** `ml/inventory_optimization/pipeline.py:40`
+
+### Q157. Why include Linear Regression?
+
+It is a transparent baseline for demand prediction.
+
+**File reference:** `ml/inventory_optimization/train.py:10`
+
+### Q158. Why include RandomForestRegressor?
+
+It learns nonlinear relations among stock, on-order values, lead time, lags, and calendar features.
+
+**File reference:** `ml/inventory_optimization/train.py:19`
+
+### Q159. Why include XGBRegressor?
+
+Boosted trees are strong for tabular demand prediction.
+
+**File reference:** `ml/inventory_optimization/train.py:28`
+
+### Q160. Why objective='reg:squarederror'?
+
+The target is numeric demand, so squared-error regression fits the task.
+
+**File reference:** `ml/inventory_optimization/train.py:24`
+
+### Q161. Why allow custom XGBoost params?
+
+It supports tuning without rewriting the pipeline builder.
+
+**File reference:** `ml/inventory_optimization/train.py:23`
+
+### Q162. Why return models as a dictionary?
+
+It simplifies evaluation, model selection, logging, and registration by model name.
+
+**File reference:** `ml/inventory_optimization/train.py:33`
+
+### Q163. Why use joblib in save_model?
+
+It is a standard way to persist sklearn pipelines.
+
+**File reference:** `ml/inventory_optimization/train.py:52`
+
+### Q164. Why lags 1, 7, and 14?
+
+They capture immediate, weekly, and two-week demand recurrence.
+
+**File reference:** `ml/inventory_optimization/features.py:13`
+
+### Q165. Why rolling windows 7 and 30?
+
+They capture weekly and monthly demand trends and volatility.
+
+**File reference:** `ml/inventory_optimization/features.py:13`
+
+### Q166. Why is fit a placeholder?
+
+The inventory feature engineer does not learn statistics currently, but fit keeps the API consistent.
+
+**File reference:** `ml/inventory_optimization/features.py:18`
+
+### Q167. Why create fallback dates if date is missing?
+
+It lets temporal features be generated, but it is risky because synthetic dates may not reflect reality.
+
+**File reference:** `ml/inventory_optimization/features.py:44`
+
+### Q168. Why drop NaNs after lag creation?
+
+Lag features produce missing early rows; complete rows are needed for model training.
+
+**File reference:** `ml/inventory_optimization/features.py:54`
+
+### Q169. What is wrong with clean_data conversion order?
+
+It drops NaNs before pd.to_numeric, so invalid numeric strings converted to NaN may remain.
+
+**File reference:** `ml/inventory_optimization/preprocessing.py:9`
+
+### Q170. Why aggregate by warehouse, sku, date?
+
+Inventory decisions are made at SKU-warehouse-date granularity.
+
+**File reference:** `ml/inventory_optimization/preprocessing.py:21`
+
+### Q171. Why sum numeric fields during aggregation?
+
+Multiple records for the same SKU/warehouse/date need one aggregate value.
+
+**File reference:** `ml/inventory_optimization/preprocessing.py:31`
+
+### Q172. Why use temporal split?
+
+Demand forecasting should train on earlier rows and test on later rows.
+
+**File reference:** `ml/inventory_optimization/pipeline.py:27`
+
+### Q173. What is df_val used for?
+
+It is created but not used, which is an implementation gap for validation or tuning.
+
+**File reference:** `ml/inventory_optimization/pipeline.py:33`
+
+### Q174. Why exclude date, warehouse, sku, demand from features?
+
+IDs/date are not directly numeric model inputs here, and demand is the target.
+
+**File reference:** `ml/inventory_optimization/pipeline.py:40`
+
+### Q175. Why sort inventory models by R2?
+
+The code selects the model explaining the most target variance on the test set.
+
+**File reference:** `ml/inventory_optimization/evaluate.py:18`
+
+### Q176. Why compute both RMSE and MAE?
+
+RMSE emphasizes large errors; MAE is interpretable in demand units.
+
+**File reference:** `ml/inventory_optimization/evaluate.py:7`
+
+### Q177. Why have MLflow fallback logic?
+
+The pipeline still works when MLflow is unavailable by saving local models and metadata.
+
+**File reference:** `ml/inventory_optimization/mlflow_utils.py:11`
+
+### Q178. Why log n_features?
+
+It documents the input dimensionality expected by the model.
+
+**File reference:** `ml/inventory_optimization/mlflow_utils.py:57`
+
+### Q179. Why create registered model names with a prefix?
+
+A prefix prevents registry name collisions and groups inventory models.
+
+**File reference:** `ml/inventory_optimization/mlflow_utils.py:71`
+
+### Q180. Why transition versions to Staging?
+
+Staging marks trained candidates that are not yet production models.
+
+**File reference:** `ml/inventory_optimization/mlflow_utils.py:79`
+
+### Q181. What does promote_model do?
+
+It transitions an MLflow model version to a target stage such as Production.
+
+**File reference:** `ml/inventory_optimization/mlflow_utils.py:111`
+
+### Q182. What is risky about archive_existing_versions=False for Staging?
+
+Multiple models can remain in Staging, which can confuse deployment decisions.
+
+**File reference:** `ml/inventory_optimization/mlflow_utils.py:79`
+
+### Q183. What packaging inconsistency exists?
+
+Inventory optimization lives under top-level ml/, while other modules live under app/backend/src/app/ml.
+
+**File reference:** `ml/inventory_optimization/pipeline.py:1`
+
+## API, Serving, and Observability
+
+### Q184. What does predict_maintenance currently serve?
+
+It serves a tanh-based average-sensor heuristic, not the trained predictive-maintenance model.
+
+**File reference:** `app/backend/services.py:20`
+
+### Q185. Why use tanh in the maintenance heuristic?
+
+tanh bounds increasing sensor magnitude into a stable risk-like score, but it is not calibrated probability.
+
+**File reference:** `app/backend/services.py:27`
+
+### Q186. Why set eta_hours=24 above score 0.7?
+
+It is a simple business-rule placeholder for high-risk maintenance urgency.
+
+**File reference:** `app/backend/services.py:28`
+
+### Q187. What is risky about averaging all sensor readings?
+
+Different sensor scales get mixed, so a large-scale sensor can dominate the score.
+
+**File reference:** `app/backend/services.py:23`
+
+### Q188. What does predict_quality currently do?
+
+It computes a pass-rate heuristic from metric variation, not a trained quality classifier.
+
+**File reference:** `app/backend/services.py:43`
+
+### Q189. Why add 1e-6 to quality mean?
+
+It prevents division by zero in std/mean.
+
+**File reference:** `app/backend/services.py:49`
+
+### Q190. Why compute defects_expected from pass_rate?
+
+It turns a pass-rate heuristic into a rough expected defect count for API output.
+
+**File reference:** `app/backend/services.py:50`
+
+### Q191. What does forecast_demand currently serve?
+
+It repeats the average of the last seven demand points across the requested horizon.
+
+**File reference:** `app/backend/services.py:62`
+
+### Q192. Why require at least seven demand history points?
+
+The naive forecast uses a last-seven average, so a week of history is required.
+
+**File reference:** `app/backend/schemas.py:47`
+
+### Q193. What does assess_inventory_risk compute?
+
+It compares summed future demand against current stock and recommends reorder quantity if short.
+
+**File reference:** `app/backend/services.py:81`
+
+### Q194. Why add 1e-6 in inventory risk denominator?
+
+It prevents division by zero when future demand is zero.
+
+**File reference:** `app/backend/services.py:84`
+
+### Q195. Why use max(0.0, recommended_order)?
+
+It prevents negative order recommendations when stock is sufficient.
+
+**File reference:** `app/backend/services.py:86`
+
+### Q196. Why record model latency?
+
+Latency monitoring helps detect slow inference paths.
+
+**File reference:** `app/backend/services.py:33; app/backend/metrics.py:21`
+
+### Q197. Why increment prediction volume?
+
+Prediction counts show usage per model or heuristic.
+
+**File reference:** `app/backend/services.py:34; app/backend/metrics.py:26`
+
+### Q198. Why gracefully handle missing prometheus_client?
+
+The app can run without observability dependencies but still emit metrics when available.
+
+**File reference:** `app/backend/metrics.py:6`
+
+### Q199. What does timed_model provide?
+
+It is a context manager that records model latency for a code block.
+
+**File reference:** `app/backend/metrics.py:36`
+
+### Q200. Why bound failure_risk and risk_score?
+
+Risk outputs should stay between 0 and 1; Pydantic enforces that contract.
+
+**File reference:** `app/backend/schemas.py:19; app/backend/schemas.py:65`
+
+### Q201. Why cap forecast horizon at 90?
+
+It prevents unreasonable long-horizon requests from weak or prototype forecasting logic.
+
+**File reference:** `app/backend/schemas.py:48`
+
+### Q202. Why include explanation in MaintenanceResponse?
+
+Operators need to know whether the result came from a heuristic or model.
+
+**File reference:** `app/backend/schemas.py:21`
+
+### Q203. What is the biggest serving improvement?
+
+Load persisted model artifacts and apply the same feature engineering at inference time.
+
+**File reference:** `app/backend/services.py:14; app/backend/src/app/ml/predictive_maintenance/model_store.py:40`
+
+## Algorithms, Metrics, and Defense Concepts
+
+### Q204. How does binary classification differ from multiclass classification here?
+
+PM uses one sigmoid output and binary crossentropy; QI uses seven softmax outputs and sparse categorical crossentropy.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:35; app/backend/src/app/ml/quality_inspection/train.py:37`
+
+### Q205. How do classification and regression metrics differ?
+
+Classification uses accuracy/precision/recall/F1/ROC-AUC; regression uses RMSE/MAE/MAPE/R2.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:24; app/backend/src/app/ml/demand_forecasting/evaluate.py:27`
+
+### Q206. What is precision?
+
+Precision is TP/(TP+FP), measuring how many predicted positives are correct.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
+
+### Q207. What is recall?
+
+Recall is TP/(TP+FN), measuring how many actual positives are caught.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:27`
+
+### Q208. What is F1?
+
+F1 is 2PR/(P+R), balancing precision and recall.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:28`
+
+### Q209. What is RMSE?
+
+RMSE is sqrt(mean squared error), emphasizing large forecast errors.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/evaluate.py:27`
+
+### Q210. What is MAE?
+
+MAE is average absolute error in the target's unit.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/evaluate.py:28`
+
+### Q211. What is MAPE's weakness?
+
+MAPE is unstable when true demand is zero or very small.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/evaluate.py:30`
+
+### Q212. What is R2?
+
+R2 measures explained variance; it can be negative for poor models.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/evaluate.py:31`
+
+### Q213. Why scale features before SVM?
+
+RBF SVM uses distances, so unscaled features distort similarity.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:75`
+
+### Q214. Why scale features for neural networks?
+
+Gradient descent trains more reliably when feature magnitudes are comparable.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:59`
+
+### Q215. Why do tree models need scaling less?
+
+Trees split by thresholds and are not distance/gradient based, though pipelines use scaling for consistency.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:73`
+
+### Q216. What is sigmoid?
+
+sigmoid(z)=1/(1+exp(-z)), mapping a score to a probability.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:35`
+
+### Q217. What is softmax?
+
+Softmax normalizes class scores into probabilities that sum to one.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:37`
+
+### Q218. What is binary crossentropy?
+
+It penalizes difference between binary labels and predicted probabilities.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:40`
+
+### Q219. What is sparse categorical crossentropy?
+
+It is multiclass crossentropy for integer labels.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:41`
+
+### Q220. What is MSE loss?
+
+It averages squared regression errors and penalizes large misses.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:89`
+
+### Q221. Why compare multiple algorithms?
+
+Comparison prevents assuming one model family is best and makes selection evidence-based.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:47`
+
+### Q222. Why not use only ANN?
+
+ANNs are not always best for small tabular data; tree and linear models are often stronger or more interpretable.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:20`
+
+### Q223. Why not use only XGBoost?
+
+XGBoost is strong but less interpretable; baselines prove whether complexity is justified.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:56`
+
+### Q224. How is overfitting controlled?
+
+Depth limits, min sample limits, dropout, early stopping, train/test splits, and validation sets are used.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:78; app/backend/src/app/ml/quality_inspection/train.py:65`
+
+### Q225. How is reproducibility handled?
+
+random_state=42, MLflow tracking, and dataset versioning support reproducible experiments.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:47; app/backend/src/app/data/versioning.py:29`
+
+### Q226. What is bagging versus boosting?
+
+Random Forest trains many trees independently; XGBoost adds trees sequentially to correct errors.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76; app/backend/src/app/ml/predictive_maintenance/train.py:90`
+
+### Q227. Why are lag features leakage-sensitive?
+
+If lag construction accidentally uses future values, the model sees the answer.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/features.py:43`
+
+### Q228. Why can rolling features leak?
+
+If computed with future-inclusive windows or wrong split order, they can include test-period information.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/features.py:56`
+
+### Q229. How should limitations be defended?
+
+Acknowledge them directly, show implemented parts, and explain concrete next fixes.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/pipeline.py:21; app/backend/services.py:14`
+
+## Known Issues and Improvements
+
+### Q230. What is the most important quality-inspection bug?
+
+The pipeline imports a missing model_store module, so it cannot complete until that file is added.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/pipeline.py:21`
+
+### Q231. What is the most important demand-forecasting bug?
+
+Keras model detection in evaluate.py and model_store.py is flawed because both sklearn and Keras have predict.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/evaluate.py:43`
+
+### Q232. What is the most important PM imbalance fix?
+
+Use majority/minority imbalance ratio and add class_weight, resampling, or threshold tuning.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:50`
+
+### Q233. What is the most important serving fix?
+
+Replace heuristics with actual persisted model loading and matching preprocessing.
+
+**File reference:** `app/backend/services.py:14`
+
+### Q234. What tests are missing?
+
+End-to-end tests for quality, demand, and inventory pipelines are missing compared with predictive maintenance.
+
+**File reference:** `app/backend/src/app/tests/test_predictive_maintenance_pipeline.py:7`
+
+### Q235. What feature persistence is missing?
+
+Feature-engineering state should be saved with models so inference can reproduce training transformations.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:84`
+
+### Q236. What explainability improvement would help?
+
+Add feature importance or SHAP explanations for tree models and XGBoost.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:90`
+
+### Q237. What PM metric improvement is needed?
+
+Add confusion matrix, PR-AUC, and threshold-specific precision/recall.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:17`
+
+### Q238. What demand validation improvement is needed?
+
+Use rolling-origin backtesting instead of one static split.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/preprocessing.py:57`
+
+### Q239. What inventory cleaning fix is needed?
+
+Convert numeric columns before dropping NaNs so coerced invalid values are removed.
+
+**File reference:** `ml/inventory_optimization/preprocessing.py:15`
+
+### Q240. What MLflow consistency improvement is needed?
+
+Use shared app settings for MLflow tracking across all modules.
+
+**File reference:** `app/backend/src/app/core/config.py:12; app/backend/src/app/ml/demand_forecasting/model_store.py:17`
+
+### Q241. What packaging improvement is needed?
+
+Move inventory optimization under the same app ML namespace or package it explicitly.
+
+**File reference:** `ml/inventory_optimization/pipeline.py:1`
+
+### Q242. What schema improvement is needed?
+
+Fix demand sales/demand naming and constrain quality class labels.
+
+**File reference:** `app/backend/src/app/data/loaders.py:198; app/backend/src/app/data/loaders.py:168`
+
+### Q243. What UI/API integration improvement is needed?
+
+Expose model version, confidence, and explanation metadata to frontend responses.
+
+**File reference:** `app/backend/schemas.py:17`
+
+### Q244. What is the safest way to phrase the project status?
+
+Say predictive maintenance is the main implemented pipeline, while other modules are staged extensions with known fixes.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:25`
+
+## Additional Implementation Questions
+
+### Q245. Why keep PM NUMERIC_COLUMNS as a constant?
+
+It centralizes the predictive feature contract for cleaning, validation, and splitting.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:8`
+
+### Q246. Why define TARGET_COLUMN?
+
+It avoids hardcoding the target name throughout preprocessing.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:18`
+
+### Q247. Why keep QI NUMERIC_COLUMNS separate from PM columns?
+
+Quality inspection uses geometric defect features rather than machine sensor features.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/preprocessing.py:8`
+
+### Q248. What happens if lag windows are too large?
+
+Too many early rows are dropped and less data remains for training.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/features.py:10`
+
+### Q249. What happens if rolling windows are too short?
+
+The model may learn noisy local patterns instead of stable trends.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/features.py:11`
+
+### Q250. Why can rolling std help inventory?
+
+Demand volatility influences safety stock and stockout risk.
+
+**File reference:** `ml/inventory_optimization/features.py:29`
+
+### Q251. Why log model_version?
+
+It gives a human-readable release marker for training runs.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/model_store.py:42`
+
+### Q252. Why log dataset name?
+
+Metrics only make sense relative to the dataset used.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/model_store.py:43`
+
+### Q253. Why log feature_columns?
+
+They document model input schema for reproducible inference.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:93`
+
+### Q254. Why log class_balance?
+
+It explains metric choice and helps compare runs with different label distributions.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:94`
+
+### Q255. Why is .h5 persistence imperfect?
+
+It works, but newer Keras formats may preserve metadata more cleanly.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/model_store.py:79`
+
+### Q256. What is a risk of joblib pickle artifacts?
+
+They are dependency-sensitive and should not be loaded from untrusted sources.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/model_store.py:86`
+
+### Q257. What does SVM C=1.0 control?
+
+C controls regularization strength; 1.0 is a balanced default.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:80`
+
+### Q258. Why use XGBoost verbosity=0 in demand?
+
+It keeps automated training logs clean.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:65`
+
+### Q259. Why use n_jobs=-1?
+
+It uses all CPU cores where supported to reduce training time.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:97`
+
+### Q260. Why train neural nets with verbose=0?
+
+It keeps pipeline logs concise during automated runs.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:137`
+
+### Q261. Why log len(history.epoch)?
+
+It shows how many epochs were actually trained before early stopping.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:139`
+
+### Q262. What can go wrong with int(0.2*n_train)?
+
+Small datasets can produce an empty validation split.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/pipeline.py:78`
+
+### Q263. What can go wrong if test data is shorter than lookback?
+
+The LSTM sequence generator returns no test sequences.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/features.py:145`
+
+### Q264. Why raise if inventory df and csv_path are both missing?
+
+The pipeline needs a data source and should fail clearly without one.
+
+**File reference:** `ml/inventory_optimization/pipeline.py:17`
+
+### Q265. Why raise if no inventory grouping columns exist?
+
+Aggregation cannot define SKU/warehouse/date granularity without grouping fields.
+
+**File reference:** `ml/inventory_optimization/preprocessing.py:26`
+
+### Q266. Why track API errors?
+
+Error counters help monitor endpoint reliability.
+
+**File reference:** `app/backend/metrics.py:16`
+
+### Q267. Why use a singleton PredictionService?
+
+It avoids recreating service state repeatedly, though production may use stronger dependency management.
+
+**File reference:** `app/backend/services.py:98`
+
+### Q268. Why use conlist for demand history?
+
+It enforces minimum history length at schema validation time.
+
+**File reference:** `app/backend/schemas.py:47`
+
+### Q269. Why use conint for horizon?
+
+It rejects zero, negative, or too-large forecast horizons.
+
+**File reference:** `app/backend/schemas.py:48`
+
+## Practical Viva Scenarios
+
+### Q270. How would you test feature order stability? (applied follow-up 1)
+
+Assert get_feature_columns exactly matches the columns used for model fit and inference. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:59`
+
+### Q271. How would you improve PM class imbalance? (applied follow-up 1)
+
+Use class weights, threshold tuning, resampling, and PR-AUC analysis. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:50`
+
+### Q272. How would you choose maintenance recall versus precision? (applied follow-up 1)
+
+Use business costs: missed failures favor recall; costly false alarms favor precision. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
+
+### Q273. How would you make ANN results more reproducible? (applied follow-up 1)
+
+Set Python, NumPy, and TensorFlow seeds and document nondeterministic hardware behavior. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:20`
+
+### Q274. How would you tune XGBoost? (applied follow-up 1)
+
+Search n_estimators, max_depth, learning_rate, subsample, colsample_bytree, and regularization. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:53`
+
+### Q275. How would you tune Random Forest? (applied follow-up 1)
+
+Tune n_estimators, max_depth, min_samples_split, min_samples_leaf, and max_features. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:33`
+
+### Q276. How would you tune ANN architecture? (applied follow-up 1)
+
+Tune layer sizes, dropout rates, learning rate, batch size, patience, and epochs. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:20`
+
+### Q277. How would you prove MLflow logging works? (applied follow-up 1)
+
+Run a pipeline and show metrics, params, artifacts, and comparison JSON in MLflow UI. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/model_store.py:41`
+
+### Q278. How would you connect PM training to API inference? (applied follow-up 1)
+
+Load the persisted model, reconstruct features, apply saved feature parameters, and call predict_proba. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/services.py:20`
+
+### Q279. How would you avoid overclaiming deep learning? (applied follow-up 1)
+
+Say ANN/LSTM are candidate models and final selection depends on evidence, not model hype. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:75`
+
+### Q280. How would you explain why accuracy is misleading? (applied follow-up 1)
+
+A rare-failure dataset can have high accuracy by always predicting no failure. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:25`
+
+### Q281. How would you handle drift? (applied follow-up 1)
+
+Monitor feature distributions and live performance, then retrain when drift is detected. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `architecture.md:174`
+
+### Q282. How would you add explainability? (applied follow-up 1)
+
+Use feature importance and SHAP to show which inputs drive predictions. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76`
+
+### Q283. How would you validate demand forecasts visually? (applied follow-up 1)
+
+Plot actual versus predicted demand and inspect residuals by date, store, and item. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/evaluate.py:94`
+
+### Q284. How would you validate quality classifier errors? (applied follow-up 1)
+
+Use a confusion matrix and class-wise recall to inspect confused defect classes. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/evaluate.py:29`
+
+### Q285. How would you choose the PM probability threshold? (applied follow-up 1)
+
+Use validation probabilities and a cost matrix for downtime, inspection cost, and missed failures. For this follow-up, also explain what code you would modify and how you would verify the change.
 
 **File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:41`
 
-### Q674. why not mandatory now: `threshold tuning`?
+### Q286. How would you handle missing sensor readings in production? (applied follow-up 1)
 
-`threshold tuning` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Validate requests, reject critical missing fields, or use justified imputation. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/schemas.py:7`
+
+### Q287. How would you make inventory recommendations safer? (applied follow-up 1)
+
+Add uncertainty, lead time, service-level targets, and safety stock logic. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/services.py:81`
+
+### Q288. How would you make demand validation stronger? (applied follow-up 1)
+
+Use backtesting across multiple rolling forecast origins. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/preprocessing.py:57`
+
+### Q289. How would you make model selection fairer? (applied follow-up 1)
+
+Use the same train/test partitions and compare models on metrics aligned to business cost. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:48`
+
+### Q290. How would you test feature order stability? (applied follow-up 2)
+
+Assert get_feature_columns exactly matches the columns used for model fit and inference. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:59`
+
+### Q291. How would you improve PM class imbalance? (applied follow-up 2)
+
+Use class weights, threshold tuning, resampling, and PR-AUC analysis. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:50`
+
+### Q292. How would you choose maintenance recall versus precision? (applied follow-up 2)
+
+Use business costs: missed failures favor recall; costly false alarms favor precision. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
+
+### Q293. How would you make ANN results more reproducible? (applied follow-up 2)
+
+Set Python, NumPy, and TensorFlow seeds and document nondeterministic hardware behavior. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:20`
+
+### Q294. How would you tune XGBoost? (applied follow-up 2)
+
+Search n_estimators, max_depth, learning_rate, subsample, colsample_bytree, and regularization. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:53`
+
+### Q295. How would you tune Random Forest? (applied follow-up 2)
+
+Tune n_estimators, max_depth, min_samples_split, min_samples_leaf, and max_features. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:33`
+
+### Q296. How would you tune ANN architecture? (applied follow-up 2)
+
+Tune layer sizes, dropout rates, learning rate, batch size, patience, and epochs. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:20`
+
+### Q297. How would you prove MLflow logging works? (applied follow-up 2)
+
+Run a pipeline and show metrics, params, artifacts, and comparison JSON in MLflow UI. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/model_store.py:41`
+
+### Q298. How would you connect PM training to API inference? (applied follow-up 2)
+
+Load the persisted model, reconstruct features, apply saved feature parameters, and call predict_proba. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/services.py:20`
+
+### Q299. How would you avoid overclaiming deep learning? (applied follow-up 2)
+
+Say ANN/LSTM are candidate models and final selection depends on evidence, not model hype. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:75`
+
+### Q300. How would you explain why accuracy is misleading? (applied follow-up 2)
+
+A rare-failure dataset can have high accuracy by always predicting no failure. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:25`
+
+### Q301. How would you handle drift? (applied follow-up 2)
+
+Monitor feature distributions and live performance, then retrain when drift is detected. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `architecture.md:174`
+
+### Q302. How would you add explainability? (applied follow-up 2)
+
+Use feature importance and SHAP to show which inputs drive predictions. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76`
+
+### Q303. How would you validate demand forecasts visually? (applied follow-up 2)
+
+Plot actual versus predicted demand and inspect residuals by date, store, and item. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/evaluate.py:94`
+
+### Q304. How would you validate quality classifier errors? (applied follow-up 2)
+
+Use a confusion matrix and class-wise recall to inspect confused defect classes. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/evaluate.py:29`
+
+### Q305. How would you choose the PM probability threshold? (applied follow-up 2)
+
+Use validation probabilities and a cost matrix for downtime, inspection cost, and missed failures. For this follow-up, also explain what code you would modify and how you would verify the change.
 
 **File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:41`
 
-### Q675. what is it: `cross-validation`?
+### Q306. How would you handle missing sensor readings in production? (applied follow-up 2)
 
-`cross-validation` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Validate requests, reject critical missing fields, or use justified imputation. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:69`
+**File reference:** `app/backend/schemas.py:7`
 
-### Q676. why useful: `cross-validation`?
+### Q307. How would you make inventory recommendations safer? (applied follow-up 2)
 
-`cross-validation` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Add uncertainty, lead time, service-level targets, and safety stock logic. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:69`
+**File reference:** `app/backend/services.py:81`
 
-### Q677. why not mandatory now: `cross-validation`?
+### Q308. How would you make demand validation stronger? (applied follow-up 2)
 
-`cross-validation` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Use backtesting across multiple rolling forecast origins. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/pipeline.py:69`
+**File reference:** `app/backend/src/app/ml/demand_forecasting/preprocessing.py:57`
 
-### Q678. what is it: `hyperparameter search`?
+### Q309. How would you make model selection fairer? (applied follow-up 2)
 
-`hyperparameter search` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Use the same train/test partitions and compare models on metrics aligned to business cost. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:47`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:48`
 
-### Q679. why useful: `hyperparameter search`?
+### Q310. How would you test feature order stability? (applied follow-up 3)
 
-`hyperparameter search` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Assert get_feature_columns exactly matches the columns used for model fit and inference. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:47`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:59`
 
-### Q680. why not mandatory now: `hyperparameter search`?
+### Q311. How would you improve PM class imbalance? (applied follow-up 3)
 
-`hyperparameter search` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Use class weights, threshold tuning, resampling, and PR-AUC analysis. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:47`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:50`
 
-### Q681. what is it: `SHAP`?
+### Q312. How would you choose maintenance recall versus precision? (applied follow-up 3)
 
-`SHAP` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Use business costs: missed failures favor recall; costly false alarms favor precision. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:30`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
 
-### Q682. why useful: `SHAP`?
+### Q313. How would you make ANN results more reproducible? (applied follow-up 3)
 
-`SHAP` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Set Python, NumPy, and TensorFlow seeds and document nondeterministic hardware behavior. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:30`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:20`
 
-### Q683. why not mandatory now: `SHAP`?
+### Q314. How would you tune XGBoost? (applied follow-up 3)
 
-`SHAP` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Search n_estimators, max_depth, learning_rate, subsample, colsample_bytree, and regularization. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/model_store.py:30`
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:53`
 
-### Q684. what is it: `real model serving`?
+### Q315. How would you tune Random Forest? (applied follow-up 3)
 
-`real model serving` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Tune n_estimators, max_depth, min_samples_split, min_samples_leaf, and max_features. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `app/backend/services.py:15`; `app/backend/src/app/ml/predictive_maintenance/model_store.py:40`
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:33`
 
-### Q685. why useful: `real model serving`?
+### Q316. How would you tune ANN architecture? (applied follow-up 3)
 
-`real model serving` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Tune layer sizes, dropout rates, learning rate, batch size, patience, and epochs. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `app/backend/services.py:15`; `app/backend/src/app/ml/predictive_maintenance/model_store.py:40`
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:20`
 
-### Q686. why not mandatory now: `real model serving`?
+### Q317. How would you prove MLflow logging works? (applied follow-up 3)
 
-`real model serving` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Run a pipeline and show metrics, params, artifacts, and comparison JSON in MLflow UI. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `app/backend/services.py:15`; `app/backend/src/app/ml/predictive_maintenance/model_store.py:40`
+**File reference:** `app/backend/src/app/ml/demand_forecasting/model_store.py:41`
 
-### Q687. what is it: `drift monitoring`?
+### Q318. How would you connect PM training to API inference? (applied follow-up 3)
 
-`drift monitoring` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Load the persisted model, reconstruct features, apply saved feature parameters, and call predict_proba. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/services.py:20`
+
+### Q319. How would you avoid overclaiming deep learning? (applied follow-up 3)
+
+Say ANN/LSTM are candidate models and final selection depends on evidence, not model hype. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:75`
+
+### Q320. How would you explain why accuracy is misleading? (applied follow-up 3)
+
+A rare-failure dataset can have high accuracy by always predicting no failure. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:25`
+
+### Q321. How would you handle drift? (applied follow-up 3)
+
+Monitor feature distributions and live performance, then retrain when drift is detected. For this follow-up, also explain what code you would modify and how you would verify the change.
 
 **File reference:** `architecture.md:174`
 
-### Q688. why useful: `drift monitoring`?
+### Q322. How would you add explainability? (applied follow-up 3)
 
-`drift monitoring` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Use feature importance and SHAP to show which inputs drive predictions. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76`
+
+### Q323. How would you validate demand forecasts visually? (applied follow-up 3)
+
+Plot actual versus predicted demand and inspect residuals by date, store, and item. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/evaluate.py:94`
+
+### Q324. How would you validate quality classifier errors? (applied follow-up 3)
+
+Use a confusion matrix and class-wise recall to inspect confused defect classes. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/evaluate.py:29`
+
+### Q325. How would you choose the PM probability threshold? (applied follow-up 3)
+
+Use validation probabilities and a cost matrix for downtime, inspection cost, and missed failures. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:41`
+
+### Q326. How would you handle missing sensor readings in production? (applied follow-up 3)
+
+Validate requests, reject critical missing fields, or use justified imputation. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/schemas.py:7`
+
+### Q327. How would you make inventory recommendations safer? (applied follow-up 3)
+
+Add uncertainty, lead time, service-level targets, and safety stock logic. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/services.py:81`
+
+### Q328. How would you make demand validation stronger? (applied follow-up 3)
+
+Use backtesting across multiple rolling forecast origins. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/preprocessing.py:57`
+
+### Q329. How would you make model selection fairer? (applied follow-up 3)
+
+Use the same train/test partitions and compare models on metrics aligned to business cost. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:48`
+
+### Q330. How would you test feature order stability? (applied follow-up 4)
+
+Assert get_feature_columns exactly matches the columns used for model fit and inference. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:59`
+
+### Q331. How would you improve PM class imbalance? (applied follow-up 4)
+
+Use class weights, threshold tuning, resampling, and PR-AUC analysis. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:50`
+
+### Q332. How would you choose maintenance recall versus precision? (applied follow-up 4)
+
+Use business costs: missed failures favor recall; costly false alarms favor precision. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
+
+### Q333. How would you make ANN results more reproducible? (applied follow-up 4)
+
+Set Python, NumPy, and TensorFlow seeds and document nondeterministic hardware behavior. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:20`
+
+### Q334. How would you tune XGBoost? (applied follow-up 4)
+
+Search n_estimators, max_depth, learning_rate, subsample, colsample_bytree, and regularization. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:53`
+
+### Q335. How would you tune Random Forest? (applied follow-up 4)
+
+Tune n_estimators, max_depth, min_samples_split, min_samples_leaf, and max_features. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:33`
+
+### Q336. How would you tune ANN architecture? (applied follow-up 4)
+
+Tune layer sizes, dropout rates, learning rate, batch size, patience, and epochs. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:20`
+
+### Q337. How would you prove MLflow logging works? (applied follow-up 4)
+
+Run a pipeline and show metrics, params, artifacts, and comparison JSON in MLflow UI. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/model_store.py:41`
+
+### Q338. How would you connect PM training to API inference? (applied follow-up 4)
+
+Load the persisted model, reconstruct features, apply saved feature parameters, and call predict_proba. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/services.py:20`
+
+### Q339. How would you avoid overclaiming deep learning? (applied follow-up 4)
+
+Say ANN/LSTM are candidate models and final selection depends on evidence, not model hype. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:75`
+
+### Q340. How would you explain why accuracy is misleading? (applied follow-up 4)
+
+A rare-failure dataset can have high accuracy by always predicting no failure. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:25`
+
+### Q341. How would you handle drift? (applied follow-up 4)
+
+Monitor feature distributions and live performance, then retrain when drift is detected. For this follow-up, also explain what code you would modify and how you would verify the change.
 
 **File reference:** `architecture.md:174`
 
-### Q689. why not mandatory now: `drift monitoring`?
+### Q342. How would you add explainability? (applied follow-up 4)
 
-`drift monitoring` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Use feature importance and SHAP to show which inputs drive predictions. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76`
+
+### Q343. How would you validate demand forecasts visually? (applied follow-up 4)
+
+Plot actual versus predicted demand and inspect residuals by date, store, and item. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/evaluate.py:94`
+
+### Q344. How would you validate quality classifier errors? (applied follow-up 4)
+
+Use a confusion matrix and class-wise recall to inspect confused defect classes. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/evaluate.py:29`
+
+### Q345. How would you choose the PM probability threshold? (applied follow-up 4)
+
+Use validation probabilities and a cost matrix for downtime, inspection cost, and missed failures. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:41`
+
+### Q346. How would you handle missing sensor readings in production? (applied follow-up 4)
+
+Validate requests, reject critical missing fields, or use justified imputation. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/schemas.py:7`
+
+### Q347. How would you make inventory recommendations safer? (applied follow-up 4)
+
+Add uncertainty, lead time, service-level targets, and safety stock logic. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/services.py:81`
+
+### Q348. How would you make demand validation stronger? (applied follow-up 4)
+
+Use backtesting across multiple rolling forecast origins. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/preprocessing.py:57`
+
+### Q349. How would you make model selection fairer? (applied follow-up 4)
+
+Use the same train/test partitions and compare models on metrics aligned to business cost. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:48`
+
+### Q350. How would you test feature order stability? (applied follow-up 5)
+
+Assert get_feature_columns exactly matches the columns used for model fit and inference. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:59`
+
+### Q351. How would you improve PM class imbalance? (applied follow-up 5)
+
+Use class weights, threshold tuning, resampling, and PR-AUC analysis. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:50`
+
+### Q352. How would you choose maintenance recall versus precision? (applied follow-up 5)
+
+Use business costs: missed failures favor recall; costly false alarms favor precision. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
+
+### Q353. How would you make ANN results more reproducible? (applied follow-up 5)
+
+Set Python, NumPy, and TensorFlow seeds and document nondeterministic hardware behavior. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:20`
+
+### Q354. How would you tune XGBoost? (applied follow-up 5)
+
+Search n_estimators, max_depth, learning_rate, subsample, colsample_bytree, and regularization. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:53`
+
+### Q355. How would you tune Random Forest? (applied follow-up 5)
+
+Tune n_estimators, max_depth, min_samples_split, min_samples_leaf, and max_features. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:33`
+
+### Q356. How would you tune ANN architecture? (applied follow-up 5)
+
+Tune layer sizes, dropout rates, learning rate, batch size, patience, and epochs. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:20`
+
+### Q357. How would you prove MLflow logging works? (applied follow-up 5)
+
+Run a pipeline and show metrics, params, artifacts, and comparison JSON in MLflow UI. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/model_store.py:41`
+
+### Q358. How would you connect PM training to API inference? (applied follow-up 5)
+
+Load the persisted model, reconstruct features, apply saved feature parameters, and call predict_proba. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/services.py:20`
+
+### Q359. How would you avoid overclaiming deep learning? (applied follow-up 5)
+
+Say ANN/LSTM are candidate models and final selection depends on evidence, not model hype. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:75`
+
+### Q360. How would you explain why accuracy is misleading? (applied follow-up 5)
+
+A rare-failure dataset can have high accuracy by always predicting no failure. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:25`
+
+### Q361. How would you handle drift? (applied follow-up 5)
+
+Monitor feature distributions and live performance, then retrain when drift is detected. For this follow-up, also explain what code you would modify and how you would verify the change.
 
 **File reference:** `architecture.md:174`
 
-### Q690. what is it: `calibration`?
+### Q362. How would you add explainability? (applied follow-up 5)
 
-`calibration` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Use feature importance and SHAP to show which inputs drive predictions. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:39`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76`
 
-### Q691. why useful: `calibration`?
+### Q363. How would you validate demand forecasts visually? (applied follow-up 5)
 
-`calibration` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Plot actual versus predicted demand and inspect residuals by date, store, and item. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:39`
+**File reference:** `app/backend/src/app/ml/demand_forecasting/evaluate.py:94`
 
-### Q692. why not mandatory now: `calibration`?
+### Q364. How would you validate quality classifier errors? (applied follow-up 5)
 
-`calibration` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Use a confusion matrix and class-wise recall to inspect confused defect classes. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:39`
+**File reference:** `app/backend/src/app/ml/quality_inspection/evaluate.py:29`
 
-### Q693. what is it: `confusion matrix`?
+### Q365. How would you choose the PM probability threshold? (applied follow-up 5)
 
-`confusion matrix` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Use validation probabilities and a cost matrix for downtime, inspection cost, and missed failures. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:17`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:41`
 
-### Q694. why useful: `confusion matrix`?
+### Q366. How would you handle missing sensor readings in production? (applied follow-up 5)
 
-`confusion matrix` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Validate requests, reject critical missing fields, or use justified imputation. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:17`
+**File reference:** `app/backend/schemas.py:7`
 
-### Q695. why not mandatory now: `confusion matrix`?
+### Q367. How would you make inventory recommendations safer? (applied follow-up 5)
 
-`confusion matrix` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Add uncertainty, lead time, service-level targets, and safety stock logic. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:17`
+**File reference:** `app/backend/services.py:81`
 
-### Q696. what is it: `PR-AUC`?
+### Q368. How would you make demand validation stronger? (applied follow-up 5)
 
-`PR-AUC` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Use backtesting across multiple rolling forecast origins. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:17`
+**File reference:** `app/backend/src/app/ml/demand_forecasting/preprocessing.py:57`
 
-### Q697. why useful: `PR-AUC`?
+### Q369. How would you make model selection fairer? (applied follow-up 5)
 
-`PR-AUC` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Use the same train/test partitions and compare models on metrics aligned to business cost. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:17`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:48`
 
-### Q698. why not mandatory now: `PR-AUC`?
+### Q370. How would you test feature order stability? (applied follow-up 6)
 
-`PR-AUC` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Assert get_feature_columns exactly matches the columns used for model fit and inference. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:17`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:59`
 
-### Q699. what is it: `Kafka streaming`?
+### Q371. How would you improve PM class imbalance? (applied follow-up 6)
 
-`Kafka streaming` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Use class weights, threshold tuning, resampling, and PR-AUC analysis. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `architecture.md:319`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:50`
 
-### Q700. why useful: `Kafka streaming`?
+### Q372. How would you choose maintenance recall versus precision? (applied follow-up 6)
 
-`Kafka streaming` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Use business costs: missed failures favor recall; costly false alarms favor precision. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `architecture.md:319`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
 
-### Q701. why not mandatory now: `Kafka streaming`?
+### Q373. How would you make ANN results more reproducible? (applied follow-up 6)
 
-`Kafka streaming` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Set Python, NumPy, and TensorFlow seeds and document nondeterministic hardware behavior. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `architecture.md:319`
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:20`
 
-### Q702. what is it: `Dockerized training`?
+### Q374. How would you tune XGBoost? (applied follow-up 6)
 
-`Dockerized training` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Search n_estimators, max_depth, learning_rate, subsample, colsample_bytree, and regularization. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `architecture.md:134`
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:53`
 
-### Q703. why useful: `Dockerized training`?
+### Q375. How would you tune Random Forest? (applied follow-up 6)
 
-`Dockerized training` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Tune n_estimators, max_depth, min_samples_split, min_samples_leaf, and max_features. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `architecture.md:134`
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:33`
 
-### Q704. why not mandatory now: `Dockerized training`?
+### Q376. How would you tune ANN architecture? (applied follow-up 6)
 
-`Dockerized training` would improve scientific rigor or production readiness. It is not mandatory for the first version because the current pipeline already proves validation, feature engineering, multi-model training, ANN training, MLflow tracking, and persistence.
+Tune layer sizes, dropout rates, learning rate, batch size, patience, and epochs. For this follow-up, also explain what code you would modify and how you would verify the change.
 
-**File reference:** `architecture.md:134`
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:20`
 
-## Summary
+### Q377. How would you prove MLflow logging works? (applied follow-up 6)
 
-Total questions: 704. Core defense: validated data, leakage-safe feature engineering, Logistic Regression baseline, Random Forest and XGBoost tabular models, compact ANN, early stopping, F1-led model selection, MLflow tracking, and deployable API architecture.
+Run a pipeline and show metrics, params, artifacts, and comparison JSON in MLflow UI. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/model_store.py:41`
+
+### Q378. How would you connect PM training to API inference? (applied follow-up 6)
+
+Load the persisted model, reconstruct features, apply saved feature parameters, and call predict_proba. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/services.py:20`
+
+### Q379. How would you avoid overclaiming deep learning? (applied follow-up 6)
+
+Say ANN/LSTM are candidate models and final selection depends on evidence, not model hype. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:75`
+
+### Q380. How would you explain why accuracy is misleading? (applied follow-up 6)
+
+A rare-failure dataset can have high accuracy by always predicting no failure. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:25`
+
+### Q381. How would you handle drift? (applied follow-up 6)
+
+Monitor feature distributions and live performance, then retrain when drift is detected. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `architecture.md:174`
+
+### Q382. How would you add explainability? (applied follow-up 6)
+
+Use feature importance and SHAP to show which inputs drive predictions. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76`
+
+### Q383. How would you validate demand forecasts visually? (applied follow-up 6)
+
+Plot actual versus predicted demand and inspect residuals by date, store, and item. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/evaluate.py:94`
+
+### Q384. How would you validate quality classifier errors? (applied follow-up 6)
+
+Use a confusion matrix and class-wise recall to inspect confused defect classes. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/evaluate.py:29`
+
+### Q385. How would you choose the PM probability threshold? (applied follow-up 6)
+
+Use validation probabilities and a cost matrix for downtime, inspection cost, and missed failures. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:41`
+
+### Q386. How would you handle missing sensor readings in production? (applied follow-up 6)
+
+Validate requests, reject critical missing fields, or use justified imputation. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/schemas.py:7`
+
+### Q387. How would you make inventory recommendations safer? (applied follow-up 6)
+
+Add uncertainty, lead time, service-level targets, and safety stock logic. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/services.py:81`
+
+### Q388. How would you make demand validation stronger? (applied follow-up 6)
+
+Use backtesting across multiple rolling forecast origins. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/preprocessing.py:57`
+
+### Q389. How would you make model selection fairer? (applied follow-up 6)
+
+Use the same train/test partitions and compare models on metrics aligned to business cost. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:48`
+
+### Q390. How would you test feature order stability? (applied follow-up 7)
+
+Assert get_feature_columns exactly matches the columns used for model fit and inference. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:59`
+
+### Q391. How would you improve PM class imbalance? (applied follow-up 7)
+
+Use class weights, threshold tuning, resampling, and PR-AUC analysis. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:50`
+
+### Q392. How would you choose maintenance recall versus precision? (applied follow-up 7)
+
+Use business costs: missed failures favor recall; costly false alarms favor precision. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
+
+### Q393. How would you make ANN results more reproducible? (applied follow-up 7)
+
+Set Python, NumPy, and TensorFlow seeds and document nondeterministic hardware behavior. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:20`
+
+### Q394. How would you tune XGBoost? (applied follow-up 7)
+
+Search n_estimators, max_depth, learning_rate, subsample, colsample_bytree, and regularization. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:53`
+
+### Q395. How would you tune Random Forest? (applied follow-up 7)
+
+Tune n_estimators, max_depth, min_samples_split, min_samples_leaf, and max_features. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:33`
+
+### Q396. How would you tune ANN architecture? (applied follow-up 7)
+
+Tune layer sizes, dropout rates, learning rate, batch size, patience, and epochs. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:20`
+
+### Q397. How would you prove MLflow logging works? (applied follow-up 7)
+
+Run a pipeline and show metrics, params, artifacts, and comparison JSON in MLflow UI. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/model_store.py:41`
+
+### Q398. How would you connect PM training to API inference? (applied follow-up 7)
+
+Load the persisted model, reconstruct features, apply saved feature parameters, and call predict_proba. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/services.py:20`
+
+### Q399. How would you avoid overclaiming deep learning? (applied follow-up 7)
+
+Say ANN/LSTM are candidate models and final selection depends on evidence, not model hype. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:75`
+
+### Q400. How would you explain why accuracy is misleading? (applied follow-up 7)
+
+A rare-failure dataset can have high accuracy by always predicting no failure. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:25`
+
+### Q401. How would you handle drift? (applied follow-up 7)
+
+Monitor feature distributions and live performance, then retrain when drift is detected. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `architecture.md:174`
+
+### Q402. How would you add explainability? (applied follow-up 7)
+
+Use feature importance and SHAP to show which inputs drive predictions. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76`
+
+### Q403. How would you validate demand forecasts visually? (applied follow-up 7)
+
+Plot actual versus predicted demand and inspect residuals by date, store, and item. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/evaluate.py:94`
+
+### Q404. How would you validate quality classifier errors? (applied follow-up 7)
+
+Use a confusion matrix and class-wise recall to inspect confused defect classes. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/evaluate.py:29`
+
+### Q405. How would you choose the PM probability threshold? (applied follow-up 7)
+
+Use validation probabilities and a cost matrix for downtime, inspection cost, and missed failures. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:41`
+
+### Q406. How would you handle missing sensor readings in production? (applied follow-up 7)
+
+Validate requests, reject critical missing fields, or use justified imputation. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/schemas.py:7`
+
+### Q407. How would you make inventory recommendations safer? (applied follow-up 7)
+
+Add uncertainty, lead time, service-level targets, and safety stock logic. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/services.py:81`
+
+### Q408. How would you make demand validation stronger? (applied follow-up 7)
+
+Use backtesting across multiple rolling forecast origins. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/preprocessing.py:57`
+
+### Q409. How would you make model selection fairer? (applied follow-up 7)
+
+Use the same train/test partitions and compare models on metrics aligned to business cost. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:48`
+
+### Q410. How would you test feature order stability? (applied follow-up 8)
+
+Assert get_feature_columns exactly matches the columns used for model fit and inference. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:59`
+
+### Q411. How would you improve PM class imbalance? (applied follow-up 8)
+
+Use class weights, threshold tuning, resampling, and PR-AUC analysis. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:50`
+
+### Q412. How would you choose maintenance recall versus precision? (applied follow-up 8)
+
+Use business costs: missed failures favor recall; costly false alarms favor precision. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
+
+### Q413. How would you make ANN results more reproducible? (applied follow-up 8)
+
+Set Python, NumPy, and TensorFlow seeds and document nondeterministic hardware behavior. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:20`
+
+### Q414. How would you tune XGBoost? (applied follow-up 8)
+
+Search n_estimators, max_depth, learning_rate, subsample, colsample_bytree, and regularization. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:53`
+
+### Q415. How would you tune Random Forest? (applied follow-up 8)
+
+Tune n_estimators, max_depth, min_samples_split, min_samples_leaf, and max_features. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:33`
+
+### Q416. How would you tune ANN architecture? (applied follow-up 8)
+
+Tune layer sizes, dropout rates, learning rate, batch size, patience, and epochs. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:20`
+
+### Q417. How would you prove MLflow logging works? (applied follow-up 8)
+
+Run a pipeline and show metrics, params, artifacts, and comparison JSON in MLflow UI. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/model_store.py:41`
+
+### Q418. How would you connect PM training to API inference? (applied follow-up 8)
+
+Load the persisted model, reconstruct features, apply saved feature parameters, and call predict_proba. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/services.py:20`
+
+### Q419. How would you avoid overclaiming deep learning? (applied follow-up 8)
+
+Say ANN/LSTM are candidate models and final selection depends on evidence, not model hype. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:75`
+
+### Q420. How would you explain why accuracy is misleading? (applied follow-up 8)
+
+A rare-failure dataset can have high accuracy by always predicting no failure. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:25`
+
+### Q421. How would you handle drift? (applied follow-up 8)
+
+Monitor feature distributions and live performance, then retrain when drift is detected. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `architecture.md:174`
+
+### Q422. How would you add explainability? (applied follow-up 8)
+
+Use feature importance and SHAP to show which inputs drive predictions. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76`
+
+### Q423. How would you validate demand forecasts visually? (applied follow-up 8)
+
+Plot actual versus predicted demand and inspect residuals by date, store, and item. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/evaluate.py:94`
+
+### Q424. How would you validate quality classifier errors? (applied follow-up 8)
+
+Use a confusion matrix and class-wise recall to inspect confused defect classes. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/evaluate.py:29`
+
+### Q425. How would you choose the PM probability threshold? (applied follow-up 8)
+
+Use validation probabilities and a cost matrix for downtime, inspection cost, and missed failures. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:41`
+
+### Q426. How would you handle missing sensor readings in production? (applied follow-up 8)
+
+Validate requests, reject critical missing fields, or use justified imputation. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/schemas.py:7`
+
+### Q427. How would you make inventory recommendations safer? (applied follow-up 8)
+
+Add uncertainty, lead time, service-level targets, and safety stock logic. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/services.py:81`
+
+### Q428. How would you make demand validation stronger? (applied follow-up 8)
+
+Use backtesting across multiple rolling forecast origins. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/preprocessing.py:57`
+
+### Q429. How would you make model selection fairer? (applied follow-up 8)
+
+Use the same train/test partitions and compare models on metrics aligned to business cost. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:48`
+
+### Q430. How would you test feature order stability? (applied follow-up 9)
+
+Assert get_feature_columns exactly matches the columns used for model fit and inference. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:59`
+
+### Q431. How would you improve PM class imbalance? (applied follow-up 9)
+
+Use class weights, threshold tuning, resampling, and PR-AUC analysis. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:50`
+
+### Q432. How would you choose maintenance recall versus precision? (applied follow-up 9)
+
+Use business costs: missed failures favor recall; costly false alarms favor precision. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
+
+### Q433. How would you make ANN results more reproducible? (applied follow-up 9)
+
+Set Python, NumPy, and TensorFlow seeds and document nondeterministic hardware behavior. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:20`
+
+### Q434. How would you tune XGBoost? (applied follow-up 9)
+
+Search n_estimators, max_depth, learning_rate, subsample, colsample_bytree, and regularization. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:53`
+
+### Q435. How would you tune Random Forest? (applied follow-up 9)
+
+Tune n_estimators, max_depth, min_samples_split, min_samples_leaf, and max_features. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:33`
+
+### Q436. How would you tune ANN architecture? (applied follow-up 9)
+
+Tune layer sizes, dropout rates, learning rate, batch size, patience, and epochs. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:20`
+
+### Q437. How would you prove MLflow logging works? (applied follow-up 9)
+
+Run a pipeline and show metrics, params, artifacts, and comparison JSON in MLflow UI. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/model_store.py:41`
+
+### Q438. How would you connect PM training to API inference? (applied follow-up 9)
+
+Load the persisted model, reconstruct features, apply saved feature parameters, and call predict_proba. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/services.py:20`
+
+### Q439. How would you avoid overclaiming deep learning? (applied follow-up 9)
+
+Say ANN/LSTM are candidate models and final selection depends on evidence, not model hype. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:75`
+
+### Q440. How would you explain why accuracy is misleading? (applied follow-up 9)
+
+A rare-failure dataset can have high accuracy by always predicting no failure. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:25`
+
+### Q441. How would you handle drift? (applied follow-up 9)
+
+Monitor feature distributions and live performance, then retrain when drift is detected. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `architecture.md:174`
+
+### Q442. How would you add explainability? (applied follow-up 9)
+
+Use feature importance and SHAP to show which inputs drive predictions. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76`
+
+### Q443. How would you validate demand forecasts visually? (applied follow-up 9)
+
+Plot actual versus predicted demand and inspect residuals by date, store, and item. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/evaluate.py:94`
+
+### Q444. How would you validate quality classifier errors? (applied follow-up 9)
+
+Use a confusion matrix and class-wise recall to inspect confused defect classes. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/evaluate.py:29`
+
+### Q445. How would you choose the PM probability threshold? (applied follow-up 9)
+
+Use validation probabilities and a cost matrix for downtime, inspection cost, and missed failures. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:41`
+
+### Q446. How would you handle missing sensor readings in production? (applied follow-up 9)
+
+Validate requests, reject critical missing fields, or use justified imputation. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/schemas.py:7`
+
+### Q447. How would you make inventory recommendations safer? (applied follow-up 9)
+
+Add uncertainty, lead time, service-level targets, and safety stock logic. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/services.py:81`
+
+### Q448. How would you make demand validation stronger? (applied follow-up 9)
+
+Use backtesting across multiple rolling forecast origins. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/preprocessing.py:57`
+
+### Q449. How would you make model selection fairer? (applied follow-up 9)
+
+Use the same train/test partitions and compare models on metrics aligned to business cost. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:48`
+
+### Q450. How would you test feature order stability? (applied follow-up 10)
+
+Assert get_feature_columns exactly matches the columns used for model fit and inference. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:59`
+
+### Q451. How would you improve PM class imbalance? (applied follow-up 10)
+
+Use class weights, threshold tuning, resampling, and PR-AUC analysis. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:50`
+
+### Q452. How would you choose maintenance recall versus precision? (applied follow-up 10)
+
+Use business costs: missed failures favor recall; costly false alarms favor precision. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
+
+### Q453. How would you make ANN results more reproducible? (applied follow-up 10)
+
+Set Python, NumPy, and TensorFlow seeds and document nondeterministic hardware behavior. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:20`
+
+### Q454. How would you tune XGBoost? (applied follow-up 10)
+
+Search n_estimators, max_depth, learning_rate, subsample, colsample_bytree, and regularization. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:53`
+
+### Q455. How would you tune Random Forest? (applied follow-up 10)
+
+Tune n_estimators, max_depth, min_samples_split, min_samples_leaf, and max_features. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:33`
+
+### Q456. How would you tune ANN architecture? (applied follow-up 10)
+
+Tune layer sizes, dropout rates, learning rate, batch size, patience, and epochs. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:20`
+
+### Q457. How would you prove MLflow logging works? (applied follow-up 10)
+
+Run a pipeline and show metrics, params, artifacts, and comparison JSON in MLflow UI. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/model_store.py:41`
+
+### Q458. How would you connect PM training to API inference? (applied follow-up 10)
+
+Load the persisted model, reconstruct features, apply saved feature parameters, and call predict_proba. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/services.py:20`
+
+### Q459. How would you avoid overclaiming deep learning? (applied follow-up 10)
+
+Say ANN/LSTM are candidate models and final selection depends on evidence, not model hype. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:75`
+
+### Q460. How would you explain why accuracy is misleading? (applied follow-up 10)
+
+A rare-failure dataset can have high accuracy by always predicting no failure. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:25`
+
+### Q461. How would you handle drift? (applied follow-up 10)
+
+Monitor feature distributions and live performance, then retrain when drift is detected. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `architecture.md:174`
+
+### Q462. How would you add explainability? (applied follow-up 10)
+
+Use feature importance and SHAP to show which inputs drive predictions. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76`
+
+### Q463. How would you validate demand forecasts visually? (applied follow-up 10)
+
+Plot actual versus predicted demand and inspect residuals by date, store, and item. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/evaluate.py:94`
+
+### Q464. How would you validate quality classifier errors? (applied follow-up 10)
+
+Use a confusion matrix and class-wise recall to inspect confused defect classes. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/evaluate.py:29`
+
+### Q465. How would you choose the PM probability threshold? (applied follow-up 10)
+
+Use validation probabilities and a cost matrix for downtime, inspection cost, and missed failures. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:41`
+
+### Q466. How would you handle missing sensor readings in production? (applied follow-up 10)
+
+Validate requests, reject critical missing fields, or use justified imputation. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/schemas.py:7`
+
+### Q467. How would you make inventory recommendations safer? (applied follow-up 10)
+
+Add uncertainty, lead time, service-level targets, and safety stock logic. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/services.py:81`
+
+### Q468. How would you make demand validation stronger? (applied follow-up 10)
+
+Use backtesting across multiple rolling forecast origins. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/preprocessing.py:57`
+
+### Q469. How would you make model selection fairer? (applied follow-up 10)
+
+Use the same train/test partitions and compare models on metrics aligned to business cost. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:48`
+
+### Q470. How would you test feature order stability? (applied follow-up 11)
+
+Assert get_feature_columns exactly matches the columns used for model fit and inference. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:59`
+
+### Q471. How would you improve PM class imbalance? (applied follow-up 11)
+
+Use class weights, threshold tuning, resampling, and PR-AUC analysis. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:50`
+
+### Q472. How would you choose maintenance recall versus precision? (applied follow-up 11)
+
+Use business costs: missed failures favor recall; costly false alarms favor precision. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
+
+### Q473. How would you make ANN results more reproducible? (applied follow-up 11)
+
+Set Python, NumPy, and TensorFlow seeds and document nondeterministic hardware behavior. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:20`
+
+### Q474. How would you tune XGBoost? (applied follow-up 11)
+
+Search n_estimators, max_depth, learning_rate, subsample, colsample_bytree, and regularization. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:53`
+
+### Q475. How would you tune Random Forest? (applied follow-up 11)
+
+Tune n_estimators, max_depth, min_samples_split, min_samples_leaf, and max_features. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:33`
+
+### Q476. How would you tune ANN architecture? (applied follow-up 11)
+
+Tune layer sizes, dropout rates, learning rate, batch size, patience, and epochs. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:20`
+
+### Q477. How would you prove MLflow logging works? (applied follow-up 11)
+
+Run a pipeline and show metrics, params, artifacts, and comparison JSON in MLflow UI. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/model_store.py:41`
+
+### Q478. How would you connect PM training to API inference? (applied follow-up 11)
+
+Load the persisted model, reconstruct features, apply saved feature parameters, and call predict_proba. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/services.py:20`
+
+### Q479. How would you avoid overclaiming deep learning? (applied follow-up 11)
+
+Say ANN/LSTM are candidate models and final selection depends on evidence, not model hype. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:75`
+
+### Q480. How would you explain why accuracy is misleading? (applied follow-up 11)
+
+A rare-failure dataset can have high accuracy by always predicting no failure. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:25`
+
+### Q481. How would you handle drift? (applied follow-up 11)
+
+Monitor feature distributions and live performance, then retrain when drift is detected. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `architecture.md:174`
+
+### Q482. How would you add explainability? (applied follow-up 11)
+
+Use feature importance and SHAP to show which inputs drive predictions. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76`
+
+### Q483. How would you validate demand forecasts visually? (applied follow-up 11)
+
+Plot actual versus predicted demand and inspect residuals by date, store, and item. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/evaluate.py:94`
+
+### Q484. How would you validate quality classifier errors? (applied follow-up 11)
+
+Use a confusion matrix and class-wise recall to inspect confused defect classes. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/evaluate.py:29`
+
+### Q485. How would you choose the PM probability threshold? (applied follow-up 11)
+
+Use validation probabilities and a cost matrix for downtime, inspection cost, and missed failures. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:41`
+
+### Q486. How would you handle missing sensor readings in production? (applied follow-up 11)
+
+Validate requests, reject critical missing fields, or use justified imputation. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/schemas.py:7`
+
+### Q487. How would you make inventory recommendations safer? (applied follow-up 11)
+
+Add uncertainty, lead time, service-level targets, and safety stock logic. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/services.py:81`
+
+### Q488. How would you make demand validation stronger? (applied follow-up 11)
+
+Use backtesting across multiple rolling forecast origins. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/preprocessing.py:57`
+
+### Q489. How would you make model selection fairer? (applied follow-up 11)
+
+Use the same train/test partitions and compare models on metrics aligned to business cost. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:48`
+
+### Q490. How would you test feature order stability? (applied follow-up 12)
+
+Assert get_feature_columns exactly matches the columns used for model fit and inference. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/features.py:59`
+
+### Q491. How would you improve PM class imbalance? (applied follow-up 12)
+
+Use class weights, threshold tuning, resampling, and PR-AUC analysis. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/preprocessing.py:50`
+
+### Q492. How would you choose maintenance recall versus precision? (applied follow-up 12)
+
+Use business costs: missed failures favor recall; costly false alarms favor precision. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:26`
+
+### Q493. How would you make ANN results more reproducible? (applied follow-up 12)
+
+Set Python, NumPy, and TensorFlow seeds and document nondeterministic hardware behavior. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:20`
+
+### Q494. How would you tune XGBoost? (applied follow-up 12)
+
+Search n_estimators, max_depth, learning_rate, subsample, colsample_bytree, and regularization. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:53`
+
+### Q495. How would you tune Random Forest? (applied follow-up 12)
+
+Tune n_estimators, max_depth, min_samples_split, min_samples_leaf, and max_features. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/train.py:33`
+
+### Q496. How would you tune ANN architecture? (applied follow-up 12)
+
+Tune layer sizes, dropout rates, learning rate, batch size, patience, and epochs. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/train.py:20`
+
+### Q497. How would you prove MLflow logging works? (applied follow-up 12)
+
+Run a pipeline and show metrics, params, artifacts, and comparison JSON in MLflow UI. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/model_store.py:41`
+
+### Q498. How would you connect PM training to API inference? (applied follow-up 12)
+
+Load the persisted model, reconstruct features, apply saved feature parameters, and call predict_proba. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/services.py:20`
+
+### Q499. How would you avoid overclaiming deep learning? (applied follow-up 12)
+
+Say ANN/LSTM are candidate models and final selection depends on evidence, not model hype. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:75`
+
+### Q500. How would you explain why accuracy is misleading? (applied follow-up 12)
+
+A rare-failure dataset can have high accuracy by always predicting no failure. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:25`
+
+### Q501. How would you handle drift? (applied follow-up 12)
+
+Monitor feature distributions and live performance, then retrain when drift is detected. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `architecture.md:174`
+
+### Q502. How would you add explainability? (applied follow-up 12)
+
+Use feature importance and SHAP to show which inputs drive predictions. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/train.py:76`
+
+### Q503. How would you validate demand forecasts visually? (applied follow-up 12)
+
+Plot actual versus predicted demand and inspect residuals by date, store, and item. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/demand_forecasting/evaluate.py:94`
+
+### Q504. How would you validate quality classifier errors? (applied follow-up 12)
+
+Use a confusion matrix and class-wise recall to inspect confused defect classes. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/quality_inspection/evaluate.py:29`
+
+### Q505. How would you choose the PM probability threshold? (applied follow-up 12)
+
+Use validation probabilities and a cost matrix for downtime, inspection cost, and missed failures. For this follow-up, also explain what code you would modify and how you would verify the change.
+
+**File reference:** `app/backend/src/app/ml/predictive_maintenance/evaluate.py:41`
+
+## Count
+
+Total questions: 505
