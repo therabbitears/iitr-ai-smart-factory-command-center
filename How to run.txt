@@ -1,0 +1,56 @@
+1) Start Backend (FastAPI)
+From repo root:
+
+cd c:\iitr-ai-smart-factory-command-center
+
+python -m venv .venv
+.\.venv\Scripts\activate
+
+pip install --upgrade pip
+pip install -r app\backend\requirements.txt
+
+uvicorn app.backend.api:app --host 0.0.0.0 --port 8000 --reload
+
+
+
+Check:
+
+OpenAPI: http://localhost:8000/docs
+Health: http://localhost:8000/healthz
+2) Start Frontend (React + Vite)
+In a new terminal:
+
+cd c:\iitr-ai-smart-factory-command-center\frontend
+
+npm install
+npm run dev
+
+Open:
+
+UI: http://localhost:3000
+Note:
+
+Frontend API client default points to http://localhost:8000 (from client.js).
+3) Start Observability Stack (Prometheus, Grafana, ELK, Jaeger, OTEL)
+In a third terminal:
+cd c:\iitr-ai-smart-factory-command-center\observability
+docker-compose up -d
+Open:
+
+Prometheus: http://localhost:9090
+Grafana: http://localhost:3000 (admin/admin unless changed)
+Jaeger: http://localhost:16686
+Kibana: http://localhost:5601
+Important:
+
+Frontend and Grafana both use port 3000. If both must run together, change frontend port in vite.config.js or stop Grafana/frontend as needed.
+Quick API test (PowerShell)
+
+One caution
+The root compose file docker-compose.yml runs a different backend entry (app.main:app from main.py), while your newer microservice endpoints are in api.py. So for your latest implementation, use the manual backend command above.
+
+If you want, I can next give you a single-command run setup (one compose file) that starts:
+
+Updated backend (api.py)
+Frontend
+Full observability stack with non-conflicting ports.

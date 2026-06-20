@@ -1,16 +1,17 @@
 import React from 'react'
-import { Drawer, List, ListItem, ListItemIcon, ListItemText, Toolbar } from '@mui/material'
+import { Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar } from '@mui/material'
 import DashboardIcon from '@mui/icons-material/Dashboard'
 import BuildIcon from '@mui/icons-material/Build'
 import BugReportIcon from '@mui/icons-material/BugReport'
 import TimelineIcon from '@mui/icons-material/Timeline'
 import InventoryIcon from '@mui/icons-material/Inventory'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 const drawerWidth = 240
 
 export default function Sidebar(){
   const navigate = useNavigate()
+  const location = useLocation()
   const items = [
     {text:'Executive', icon:<DashboardIcon/>, to:'/executive'},
     {text:'Maintenance', icon:<BuildIcon/>, to:'/maintenance'},
@@ -24,9 +25,11 @@ export default function Sidebar(){
       <Toolbar />
       <List>
         {items.map(i=> (
-          <ListItem button key={i.text} onClick={()=>navigate(i.to)}>
-            <ListItemIcon>{i.icon}</ListItemIcon>
-            <ListItemText primary={i.text} />
+          <ListItem key={i.text} disablePadding>
+            <ListItemButton selected={location.pathname === i.to} onClick={()=>navigate(i.to)}>
+              <ListItemIcon>{i.icon}</ListItemIcon>
+              <ListItemText primary={i.text} />
+            </ListItemButton>
           </ListItem>
         ))}
       </List>

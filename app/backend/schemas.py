@@ -41,7 +41,7 @@ class DemandHistoryPoint(BaseModel):
 class DemandForecastRequest(BaseModel):
     store_id: str
     item_id: str
-    history: conlist(DemandHistoryPoint, min_items=7)  # require >=7 days
+    history: conlist(DemandHistoryPoint, min_length=7)  # require >=7 days
     horizon: conint(gt=0, le=90) = 14
 
 

@@ -18,3 +18,5 @@ npm run dev
 ```
 
 The app uses Material UI for components, Recharts for simple charts, and Axios for API integration. Configure backend URL with `REACT_APP_API_URL` environment variable.
+
+Default dev URL: `http://localhost:5173`

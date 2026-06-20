@@ -1,3 +1,554 @@
+# Smart Factory Command Center Viva Questions (500)
+
+## 1) ML Fundamentals (Q001-Q020)
+1. What is machine learning, and how is it different from traditional rule-based programming?
+2. What are the main categories of machine learning (supervised, unsupervised, reinforcement)?
+3. What is the difference between a feature, a label, and an instance?
+4. What is inductive bias, and why is it necessary for learning?
+5. How do you define training, validation, and test datasets?
+6. What is overfitting, and how can you identify it?
+7. What is underfitting, and what are common causes?
+8. What is the bias-variance tradeoff?
+9. What does generalization mean in ML systems?
+10. Why is data quality often more important than model complexity?
+11. What is the role of domain knowledge in feature design?
+12. Why are baselines important before trying complex models?
+13. What is a loss function, and how is it different from an evaluation metric?
+14. Why does random seed control matter for reproducible ML?
+15. What are deterministic vs non-deterministic model training behaviors?
+16. How would you explain model interpretability to a non-technical stakeholder?
+17. What is data leakage, and why is it dangerous?
+18. What is concept drift, and how does it differ from data drift?
+19. How do you decide whether to solve a problem with regression or classification?
+20. What are key assumptions to validate before selecting an ML approach?
+
+## 2) Linear Algebra for ML (Q021-Q040)
+21. Why are vectors and matrices fundamental to ML models?
+22. What is the geometric meaning of a dot product in ML?
+23. How does matrix multiplication relate to neural network layers?
+24. What is a tensor, and how is it used in deep learning frameworks?
+25. What is rank deficiency, and why can it affect model training?
+26. Why is matrix inversion often avoided in numerical optimization?
+27. What are eigenvalues and eigenvectors, and where are they used in ML?
+28. How does PCA use linear algebra to reduce dimensionality?
+29. What is orthogonality, and why is it useful in feature spaces?
+30. What is condition number, and how does it impact numerical stability?
+31. Why do we normalize vectors in cosine similarity problems?
+32. How does SVD help with compression and latent factor modeling?
+33. What is a projection of a vector onto a subspace?
+34. Why does high dimensionality make distance metrics less meaningful?
+35. What is the difference between L1 and L2 norms geometrically?
+36. How are gradients represented in vector/matrix form?
+37. Why do Jacobian and Hessian matrices matter in optimization?
+38. What is broadcasting in tensor operations?
+39. How can tensor shape mismatch cause runtime errors in ANN/CNN models?
+40. Why is understanding tensor dimensions critical in convolution operations?
+
+## 3) Probability and Statistics (Q041-Q060)
+41. What is the difference between probability and likelihood?
+42. How does Bayes theorem apply to classification problems?
+43. What are prior, posterior, and evidence in Bayesian inference?
+44. What is the difference between population and sample statistics?
+45. Why is standard deviation important in feature scaling?
+46. What is covariance, and how is it different from correlation?
+47. How do outliers affect mean, median, and variance?
+48. What is a confidence interval, and how is it interpreted?
+49. What is a p-value, and what are common misconceptions about it?
+50. What is Type I vs Type II error in hypothesis testing?
+51. Why is class imbalance a statistical issue for ML evaluation?
+52. What is a distribution shift, and how can you detect it statistically?
+53. What is KL divergence and where is it useful?
+54. What is entropy in information theory and ML?
+55. How does cross-entropy relate to classification loss?
+56. Why does Gaussian assumption matter in some models?
+57. What is heteroscedasticity in regression?
+58. How do you test whether two datasets come from the same distribution?
+59. What is bootstrapping and why is it useful for uncertainty estimation?
+60. How are statistical assumptions validated in production ML pipelines?
+
+## 4) Data Preprocessing (Q061-Q080)
+61. Why is missing value treatment critical before model training?
+62. Compare mean, median, and model-based imputation techniques.
+63. When should rows with missing values be dropped instead of imputed?
+64. How do duplicate records impact model behavior?
+65. Why is timestamp parsing and timezone handling important in industrial data?
+66. What is the impact of inconsistent units across sensors?
+67. How do you handle categorical variables in tree-based vs linear models?
+68. Why do we scale features for ANN and distance-based models?
+69. Compare StandardScaler and MinMaxScaler with practical use cases.
+70. What is target leakage during preprocessing?
+71. How can train-test contamination happen during scaling?
+72. Why should preprocessing steps be fitted only on training data?
+73. What is the role of pipelines in preventing preprocessing mistakes?
+74. How do you validate schema consistency in ingestion pipelines?
+75. What are common preprocessing checks for sensor data quality?
+76. How do you detect and handle impossible values (e.g., negative stock)?
+77. Why are domain constraints important in preprocessing?
+78. What are robust methods for outlier capping in production?
+79. How do you design preprocessing for streaming vs batch data?
+80. What preprocessing metadata should be versioned for reproducibility?
+
+## 5) Feature Engineering (Q081-Q100)
+81. Why is feature engineering often the highest-leverage ML activity?
+82. What is the fit-transform pattern and why does it reduce leakage risk?
+83. How do lag features capture temporal dependencies?
+84. What are rolling-window features and when do they help?
+85. Why are cyclical encodings useful for time-based features?
+86. What is feature interaction and when should it be explicitly added?
+87. How does one-hot encoding impact feature dimensionality?
+88. What is target encoding and what leakage risks does it carry?
+89. How do you evaluate whether a feature is predictive or redundant?
+90. What is multicollinearity and why does it matter for linear models?
+91. How can permutation importance validate feature utility?
+92. How do domain-driven features improve model trust?
+93. What is a feature store and why is it useful in MLOps?
+94. Why should feature definitions be shared between training and inference?
+95. How do you engineer features for predictive maintenance from sensor streams?
+96. How do you engineer features for demand forecasting from sales history?
+97. How do you engineer features for inventory risk scoring?
+98. How do you engineer features for image-based quality inspection?
+99. What feature drift indicators should be monitored in production?
+100. How do you retire stale features without breaking downstream models?
+
+## 6) Regression Models (Q101-Q120)
+101. What are key assumptions of linear regression?
+102. How do you interpret regression coefficients?
+103. What is regularization in regression and why is it needed?
+104. Compare Ridge, Lasso, and ElasticNet.
+105. What does R-squared measure, and when can it be misleading?
+106. Why is RMSE sensitive to outliers?
+107. When is MAE preferred over RMSE?
+108. How does multicollinearity affect regression stability?
+109. What is residual analysis and why is it important?
+110. How do you detect non-linearity in regression residuals?
+111. What is weighted least squares and when is it useful?
+112. What is quantile regression and how can it support risk-aware planning?
+113. How do you produce prediction intervals in regression tasks?
+114. How does feature scaling affect linear regression optimization?
+115. Why can simple linear models outperform complex models in production?
+116. What is the effect of outliers on fitted regression parameters?
+117. How do you evaluate regression performance over time segments?
+118. How can regression be used for demand forecasting baselines?
+119. How would you explain regression model confidence to operations teams?
+120. What safeguards are needed before deploying a regression model?
+
+## 7) Classification Models (Q121-Q140)
+121. What is the difference between binary, multiclass, and multilabel classification?
+122. How does logistic regression differ from linear regression?
+123. Why is sigmoid output interpreted as probability in logistic regression?
+124. What is decision threshold and how does it impact precision/recall?
+125. What is ROC-AUC and when is PR-AUC more informative?
+126. What is confusion matrix and how do you interpret it for quality inspection?
+127. Why is F1-score useful in imbalanced datasets?
+128. What is class weighting and when should it be used?
+129. How does oversampling differ from undersampling?
+130. What is SMOTE and what are its limitations?
+131. Why is calibration important for probabilistic classifiers?
+132. What is log loss and why is it sensitive to confident errors?
+133. How do cost-sensitive errors apply to predictive maintenance alerts?
+134. What is false positive vs false negative tradeoff in fault detection?
+135. How do you select optimal threshold for business objectives?
+136. Why should thresholds differ across plants or product lines?
+137. What are one-vs-rest and one-vs-one multiclass strategies?
+138. How do you monitor classifier drift in production?
+139. What type of explainability is needed for classification decisions?
+140. What post-deployment checks are required for classification services?
+
+## 8) Tree-Based and Ensemble Methods (Q141-Q160)
+141. How does a decision tree split data, and what is impurity reduction?
+142. Compare Gini impurity and entropy.
+143. Why do decision trees overfit without constraints?
+144. How do max depth and min samples affect tree bias/variance?
+145. What is bagging and how does Random Forest use it?
+146. Why are Random Forests robust to noisy features?
+147. What is feature importance in Random Forest and its pitfalls?
+148. How does boosting differ from bagging?
+149. What is gradient boosting in simple terms?
+150. Why is XGBoost often strong on tabular data?
+151. What is the role of learning rate in boosted trees?
+152. How do `n_estimators` and `max_depth` interact in XGBoost?
+153. What is early stopping and why is it useful in boosting?
+154. How do you prevent overfitting in XGBoost?
+155. Why does XGBoost handle non-linear interactions well?
+156. What are common hyperparameters to tune for Random Forest?
+157. How do you compare tree-based models with linear baselines fairly?
+158. When can tree ensembles fail in time series tasks?
+159. How do you serve tree models efficiently in microservices?
+160. What monitoring metrics matter specifically for boosted tree models?
+
+## 9) Model Selection and Tuning (Q161-Q180)
+161. Why is cross-validation important for model selection?
+162. What is the difference between random split and time-based split?
+163. Why is random CV invalid for many forecasting problems?
+164. What is nested cross-validation and when is it needed?
+165. Compare grid search, random search, and Bayesian optimization.
+166. What is hyperparameter overfitting to validation data?
+167. How do you define a fair model comparison protocol?
+168. Why should preprocessing be included inside CV folds?
+169. What are practical stopping criteria in hyperparameter tuning?
+170. How do you choose evaluation metric aligned to business cost?
+171. What is champion-challenger evaluation in MLOps?
+172. How do you compare models across multiple plants and SKUs?
+173. Why should confidence intervals be reported with performance metrics?
+174. How do you evaluate model stability across random seeds?
+175. What is Pareto tradeoff between accuracy and latency?
+176. How do you tune models under strict inference SLAs?
+177. How do you avoid data snooping in iterative model development?
+178. When should you stop model complexity escalation?
+179. How do you document model selection decisions for audits?
+180. What reproducibility artifacts must be saved after tuning?
+
+## 10) ANN Foundations (Q181-Q200)
+181. What is an artificial neuron and how does it compute output?
+182. What is the role of activation functions in ANN?
+183. Why are non-linear activations essential in deep networks?
+184. Compare ReLU, Leaky ReLU, tanh, and sigmoid.
+185. What is forward propagation?
+186. What is backpropagation and why does chain rule matter?
+187. What is gradient descent in neural network training?
+188. Compare batch, mini-batch, and stochastic gradient descent.
+189. Why does learning rate strongly affect ANN convergence?
+190. What is vanishing gradient and where does it occur?
+191. What is exploding gradient and how do you mitigate it?
+192. What is weight initialization and why is it important?
+193. Compare Xavier and He initialization.
+194. What is the role of bias terms in ANN layers?
+195. Why is normalization useful in ANN training?
+196. What does an epoch represent in deep learning?
+197. What are trainable parameters and how do you count them?
+198. Why can deeper networks represent complex functions better?
+199. What is universal approximation theorem and its practical limitation?
+200. How do ANN models differ from tree models on tabular industrial data?
+
+## 11) ANN Architectures and Regularization (Q201-Q220)
+201. How do you choose the number of hidden layers and neurons?
+202. What is dropout and how does it reduce overfitting?
+203. What is L2 regularization in neural networks?
+204. What is batch normalization and why does it speed up training?
+205. What is early stopping and when should it be triggered?
+206. How does optimizer choice (SGD, Adam, RMSProp) impact training?
+207. What are Adam advantages and potential pitfalls?
+208. Why does ANN on small datasets often overfit quickly?
+209. What is model capacity and how is it controlled?
+210. How do you perform ANN hyperparameter tuning efficiently?
+211. What is the difference between training loss and validation loss trends?
+212. How do you diagnose ANN underfitting from learning curves?
+213. How do you diagnose ANN overfitting from learning curves?
+214. What is label smoothing and when is it useful?
+215. What is gradient clipping and why can it stabilize training?
+216. How do mixed precision and GPU acceleration affect ANN training?
+217. Why is deterministic ANN training difficult across hardware?
+218. How do you export ANN models for production inference?
+219. What ANN-specific monitoring should be done in production?
+220. When is ANN not the right choice for a manufacturing use case?
+
+## 12) CNN Fundamentals (Q221-Q240)
+221. What is a convolution operation in CNNs?
+222. What are kernels/filters and how do they learn features?
+223. What is stride and how does it affect output resolution?
+224. What is padding and why do we use it?
+225. What is receptive field in CNN architecture?
+226. How does pooling reduce dimensionality?
+227. Compare max pooling and average pooling.
+228. Why are CNNs translation-invariant to an extent?
+229. What are feature maps in a CNN layer?
+230. Why do early CNN layers learn edges and textures?
+231. Why do deeper CNN layers learn semantic patterns?
+232. What is the role of flattening before dense layers?
+233. Why is parameter sharing beneficial in CNNs?
+234. What is the difference between convolution and cross-correlation?
+235. What is depthwise separable convolution?
+236. How do 1x1 convolutions help network design?
+237. What is dilated convolution and where is it useful?
+238. How do CNNs handle grayscale vs RGB industrial images?
+239. What preprocessing is required before CNN inference?
+240. What are common causes of poor CNN generalization?
+
+## 13) CNN Architectures and Training (Q241-Q260)
+241. Compare LeNet, AlexNet, VGG, ResNet, and EfficientNet briefly.
+242. What problem do residual connections solve?
+243. How do skip connections improve gradient flow?
+244. What is transfer learning and why is it useful in quality inspection?
+245. What is fine-tuning vs feature extraction in pretrained CNNs?
+246. How do you choose layers to freeze during transfer learning?
+247. What data augmentation techniques are useful for defect images?
+248. How does class imbalance affect defect detection CNNs?
+249. What are focal loss and weighted loss functions?
+250. What is IoU and where is it used in vision tasks?
+251. What is mAP and how is it interpreted?
+252. How do you evaluate CNN false negatives in safety-critical QA?
+253. What is Grad-CAM and why is it useful for explainability?
+254. How do you detect data leakage in image datasets?
+255. Why can background artifacts cause shortcut learning in CNNs?
+256. How do you design a robust train/val/test split for image data?
+257. What are practical GPU memory optimization techniques for CNN training?
+258. How do you benchmark CNN inference latency in production?
+259. What compression methods (quantization/pruning) apply to CNN deployment?
+260. How do you monitor CNN performance drift after deployment?
+
+## 14) Time Series and LSTM (Q261-Q280)
+261. Why do time series problems require order-aware data splitting?
+262. What are stationarity and seasonality in time series?
+263. How do lag and rolling features compare with sequence models?
+264. What is a sliding window and why is it used for LSTM input?
+265. How does an LSTM cell differ from a simple RNN cell?
+266. What are input, forget, and output gates in LSTM?
+267. Why do LSTMs mitigate vanishing gradients better than vanilla RNNs?
+268. How do you choose lookback window size for LSTM forecasting?
+269. What is teacher forcing and when is it relevant?
+270. How do you handle multi-step forecasting in LSTM?
+271. Why must sequence scaling be consistent between training and inference?
+272. What are sequence-to-one vs sequence-to-sequence forecasting setups?
+273. How do you evaluate forecasting models with rolling-origin backtesting?
+274. What is MAPE and when can it be misleading?
+275. Why should naive forecasts be included as benchmarks?
+276. How do exogenous variables improve demand forecasting?
+277. How do you prevent leakage in calendar/event features?
+278. How do you detect forecast drift after deployment?
+279. How do you estimate uncertainty in LSTM forecasts?
+280. When are tree-based time-series features better than LSTM?
+
+## 15) Demand Forecasting Module Viva (Q281-Q300)
+281. Why aggregate demand by store-item-date before modeling?
+282. What business decisions depend on accurate demand forecasts?
+283. Why were lag windows like 7, 14, and 30 chosen?
+284. How do rolling mean and rolling std improve model signal?
+285. Why include day-of-week and month in forecasting features?
+286. How do promotions/holidays affect forecast quality?
+287. Why use a train/val/test temporal split of 70/15/15?
+288. How do you compare Linear Regression, Random Forest, XGBoost, and LSTM fairly?
+289. Why can LSTM have a different effective test size after windowing?
+290. How do you ensure SKU-level forecasts remain coherent with total demand?
+291. What risks arise when using synthetic data for notebook validation?
+292. How do you handle cold-start SKUs with little history?
+293. What retraining cadence is suitable for demand models?
+294. What forecast horizon is optimal for procurement planning?
+295. How do you evaluate forecasts across high-volume and low-volume SKUs?
+296. How is forecast output integrated into inventory risk scoring?
+297. Which model interpretability techniques help planners trust forecasts?
+298. How do you set alert thresholds for forecast degradation?
+299. What runtime SLAs are needed for forecast API endpoints?
+300. What fallback logic should be used when model inference fails?
+
+## 16) Predictive Maintenance Module Viva (Q301-Q320)
+301. What is predictive maintenance and how is it different from preventive maintenance?
+302. What labels are typically used in maintenance prediction tasks?
+303. How do sensor sampling rates impact feature design?
+304. What features indicate imminent equipment failure?
+305. How do you model remaining useful life (RUL)?
+306. What are challenges of rare failure events in model training?
+307. How do false negatives impact maintenance risk?
+308. How do false positives impact operations cost?
+309. What threshold strategy is used for maintenance alerting?
+310. Why are temporal validation strategies critical in maintenance data?
+311. How do you deal with sensor drift and recalibration events?
+312. What role do operating regimes play in model performance?
+313. How do you capture machine-specific behavior differences?
+314. How do you explain a high-risk score to reliability engineers?
+315. What actions should follow a model-generated maintenance alert?
+316. How do you monitor maintenance model precision over time?
+317. What data governance controls are required for machine telemetry?
+318. How do you design feedback loops from maintenance outcomes?
+319. Which metrics are most important for maintenance model success?
+320. How do you run safe canary deployment for maintenance models?
+
+## 17) Quality Inspection Module Viva (Q321-Q340)
+321. What is the target variable in a typical quality inspection model?
+322. How do vision and tabular quality models complement each other?
+323. How do you define defect taxonomy consistently across plants?
+324. Why is annotation quality crucial for CNN defect models?
+325. How do you handle class imbalance between normal and defective samples?
+326. What is the cost of a false accept vs false reject in QA?
+327. How do you set operating thresholds for pass/fail decisions?
+328. What explainability methods are acceptable for quality auditors?
+329. How do you avoid data leakage from repeated product images?
+330. How do you manage domain shift between camera setups?
+331. What preprocessing is required for illumination variation?
+332. How do you monitor defect-type-specific performance drift?
+333. Why might precision be prioritized over recall (or vice versa) in QA?
+334. How do you integrate quality predictions with MES systems?
+335. How do you validate robustness under noisy production conditions?
+336. What retraining triggers should be used for quality models?
+337. How do you version quality datasets and annotation guidelines?
+338. What is a human-in-the-loop workflow for uncertain predictions?
+339. How do you estimate throughput impact from model inference latency?
+340. How do you test quality model rollback procedures?
+
+## 18) Inventory Optimization Viva (Q341-Q360)
+341. How does inventory optimization depend on demand forecasts?
+342. What is reorder point and how is it calculated?
+343. What is safety stock and how is uncertainty incorporated?
+344. How do lead time and service level affect optimal stock?
+345. What is stockout risk and how is it quantified?
+346. How do you balance holding cost vs stockout penalty?
+347. Why aggregate inventory data by warehouse-SKU-date?
+348. Which features are most predictive for inventory risk scoring?
+349. How can seasonality distort reorder recommendations?
+350. How do you incorporate supplier reliability in risk models?
+351. What KPI should validate inventory model effectiveness?
+352. How do you evaluate model recommendations against EOQ baselines?
+353. What constraints must be considered in real reorder decisions?
+354. How do you avoid over-ordering due to forecast bias?
+355. How should inventory model outputs be surfaced in dashboards?
+356. How do you detect drift in stock and demand distributions?
+357. What failure modes exist if inventory APIs are unavailable?
+358. How do you prioritize SKUs for model rollout?
+359. How do you A/B test inventory policies safely?
+360. How do you audit inventory recommendation decisions?
+
+## 19) MLflow and MLOps (Q361-Q380)
+361. What is the purpose of experiment tracking in MLflow?
+362. What artifacts should be logged for reproducible experiments?
+363. What are run parameters, metrics, and artifacts in MLflow?
+364. How does model registry support governance and traceability?
+365. What is model versioning and why is it critical?
+366. How do staging and production model stages differ?
+367. What checks should gate model promotion to production?
+368. How do you compare runs programmatically for selection?
+369. How do you maintain lineage from data to model to endpoint?
+370. What is a champion-challenger deployment workflow?
+371. How do CI/CD pipelines integrate with MLflow registry?
+372. What rollback strategy should be used after bad model release?
+373. How should feature preprocessing objects be versioned with models?
+374. How do you track environment dependencies for reproducibility?
+375. What are risks of local artifact storage vs object storage?
+376. How do you secure model registry access in enterprise setups?
+377. How do you monitor model freshness and staleness?
+378. What retraining orchestration options are suitable for this platform?
+379. How do you design model approval workflows with audit trails?
+380. What MLOps anti-patterns are common in early-stage platforms?
+
+## 20) Backend and API Architecture (Q381-Q400)
+381. Why use FastAPI for ML microservices?
+382. How do DTOs improve API contract reliability?
+383. What validation rules should be enforced at request boundaries?
+384. How do dependency injection patterns improve testability?
+385. Why is centralized exception handling important?
+386. How do you structure APIs for maintenance, quality, forecast, and inventory endpoints?
+387. What are sync vs async tradeoffs in inference services?
+388. How do you enforce API latency SLAs under load?
+389. What retry and timeout strategies should clients use?
+390. How do you handle partial failures across microservices?
+391. What authentication mechanism fits internal industrial APIs?
+392. How do you implement authorization by plant/role?
+393. Why is rate limiting important for prediction endpoints?
+394. How do you version APIs without breaking clients?
+395. What should be included in OpenAPI docs for ML endpoints?
+396. How do you design health, readiness, and liveness endpoints?
+397. How do you expose model metadata safely via API?
+398. How can idempotency be handled in inference requests?
+399. What logging context should be captured per request?
+400. How do you load models efficiently at startup in FastAPI?
+
+## 21) Frontend and Dashboard Viva (Q401-Q420)
+401. Why use Material UI for enterprise dashboards?
+402. How do you design responsive dashboard layouts for desktop and mobile?
+403. What KPIs should appear on an Executive Dashboard?
+404. How should Maintenance Dashboard visualize risk trends?
+405. What visuals are most useful for Quality Dashboard insights?
+406. How should Forecast Dashboard communicate uncertainty?
+407. How should Inventory Dashboard represent reorder risk and priorities?
+408. Why are real-time charts useful for operations command centers?
+409. How do you avoid misleading chart scaling in KPI dashboards?
+410. What caching strategy should frontend use for API calls?
+411. How should auth context be handled in React apps?
+412. What are secure token storage best practices in browser apps?
+413. How do protected routes improve security posture?
+414. How do you design error states for failed prediction APIs?
+415. What UX patterns improve trust in AI-generated recommendations?
+416. How do you show model confidence and caveats in UI?
+417. How do you handle stale data indicators in dashboards?
+418. How do you make dashboard filtering performant at scale?
+419. What accessibility requirements matter for industrial dashboards?
+420. How do you test frontend integrations with backend mock services?
+
+## 22) Observability and Monitoring Viva (Q421-Q440)
+421. Why is Prometheus suitable for monitoring ML services?
+422. What metrics define API latency and how are percentiles used?
+423. How do you monitor model latency separately from API latency?
+424. What is prediction volume and why track it per model?
+425. How do you compute and track error rates per endpoint?
+426. What are useful Grafana dashboard panels for this platform?
+427. How does OpenTelemetry tracing help root-cause analysis?
+428. Why use Jaeger for distributed trace visualization?
+429. What tracing spans should be created in inference flows?
+430. How do you correlate logs, metrics, and traces in incidents?
+431. How do ELK components support centralized logging?
+432. What structured log fields are essential for ML services?
+433. How do you design alerts for high latency and high error rates?
+434. How should alert thresholds differ for batch vs real-time endpoints?
+435. What are high-cardinality metric pitfalls in Prometheus?
+436. How do you sample traces without losing diagnostic value?
+437. What drift detection metrics should be monitored continuously?
+438. How do you monitor data freshness and missing data incidents?
+439. How do you build SLOs for AI services in manufacturing?
+440. What runbooks should accompany observability dashboards?
+
+## 23) Drift Detection and Model Governance (Q441-Q460)
+441. What is feature drift and how do you detect it statistically?
+442. What is label drift and why is it harder to detect in real time?
+443. What is prediction drift and what does it indicate?
+444. How can PSI (Population Stability Index) be used for drift monitoring?
+445. How do KS tests help compare training and production distributions?
+446. What drift thresholds should trigger investigation vs retraining?
+447. How do you prevent alert fatigue in drift monitoring?
+448. What governance policy should exist for model retraining approvals?
+449. How do you validate new model candidates under drifted data?
+450. What is shadow deployment and why is it valuable?
+451. What is canary deployment for ML models?
+452. How do you measure business impact of model drift?
+453. How do delayed labels affect drift response strategies?
+454. What rollback criteria should be codified in production?
+455. How do you ensure traceability for each prediction decision?
+456. How do you handle regulated audit requests for model outcomes?
+457. Why is data lineage essential for drift root-cause analysis?
+458. How do you document model cards for industrial AI systems?
+459. What governance controls are needed for model promotion workflow?
+460. How do you enforce separation of duties in MLOps pipelines?
+
+## 24) Security, Reliability, and Scalability (Q461-Q480)
+461. What are top security risks for ML APIs in industrial environments?
+462. How do you secure model artifacts at rest and in transit?
+463. Why is secrets management mandatory in production ML platforms?
+464. How do you design RBAC for data scientists, operators, and admins?
+465. What is the role of network segmentation in protecting OT/IT systems?
+466. How do you mitigate prompt/model extraction attacks on APIs?
+467. How do you defend against data poisoning risks in retraining pipelines?
+468. What reliability patterns improve inference service uptime?
+469. How do circuit breakers and bulkheads help microservice resilience?
+470. What autoscaling signals should be used for inference pods?
+471. How do you plan capacity for peak prediction traffic?
+472. What caching strategies reduce inference latency and cost?
+473. How do you guarantee graceful degradation when dependencies fail?
+474. What backup and disaster recovery plans are needed for model registry?
+475. How do you test chaos scenarios for ML microservices?
+476. Why are liveness/readiness probes important in Kubernetes deployment?
+477. How do you isolate noisy-neighbor effects in multi-tenant environments?
+478. How do you estimate infra cost impact of observability retention?
+479. What tradeoffs exist between latency, accuracy, and compute cost?
+480. How do you prioritize technical debt under production pressure?
+
+## 25) System Design, Strategy, and Viva Deep-Dive (Q481-Q500)
+481. How would you explain end-to-end architecture of this platform to leadership?
+482. What design decisions make this platform extensible for new AI modules?
+483. Why should training and inference be separated operationally?
+484. How do you define production readiness for AI systems?
+485. What maturity model would you use for this Smart Factory AI platform?
+486. What are the biggest architectural risks in the current implementation?
+487. What are the highest-priority improvements before go-live?
+488. How would you phase rollout across plants safely?
+489. How would you benchmark ROI of each AI module?
+490. Which KPIs indicate success for predictive maintenance deployment?
+491. Which KPIs indicate success for quality inspection deployment?
+492. Which KPIs indicate success for demand forecasting deployment?
+493. Which KPIs indicate success for inventory optimization deployment?
+494. How would you present model uncertainty to non-technical stakeholders?
+495. What governance board decisions are required for model promotion?
+496. How would you audit fairness and consistency across plants and product lines?
+497. What is your strategy for continuous learning and retraining?
+498. How do you future-proof the platform for edge AI use cases?
+499. If one module fails, how should the overall command center continue operating?
+500. What would your 90-day production hardening roadmap include?
 # Capstone AI/ML Implementation Question Bank
 
 This is a rebuilt, non-padded viva/interview preparation file based on the actual AI/ML-related Python files in the repository. Questions are grouped by module, include file references, and call out real implementation decisions, formulas, risks, and known gaps.
